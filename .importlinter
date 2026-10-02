@@ -1,0 +1,26 @@
+[importlinter]
+root_packages =
+    app
+include_external_packages = True
+
+[importlinter:contract:domain_is_independent]
+name = Domain must not depend on frameworks or outer layers
+type = forbidden
+source_modules =
+    app.domain
+forbidden_modules =
+    fastapi
+    starlette
+    pydantic
+    sqlalchemy
+    psycopg
+    app.api
+    app.infrastructure
+
+[importlinter:contract:api_does_not_reach_persistence]
+name = API must not import persistence implementations
+type = forbidden
+source_modules =
+    app.api
+forbidden_modules =
+    app.infrastructure.persistence
