@@ -1,0 +1,20 @@
+:root {
+  --color-ink: #171512;
+  --color-paper: #f2eadc;
+  --color-paper-deep: #dfd2bd;
+  --color-accent: #d8492f;
+  --color-gold: #c8963e;
+  --color-muted: #665f55;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-body: 'Trebuchet MS', sans-serif;
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2.5rem;
+  --space-5: 4rem;
+  --radius-small: 0.5rem;
+  --radius-large: 1.5rem;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  font-family: var(--font-body);
+}
