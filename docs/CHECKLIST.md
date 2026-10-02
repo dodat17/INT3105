@@ -33,14 +33,14 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 ### Repository và quy trình
 
 - [x] `N3` Tạo cấu trúc repository cho backend, frontend, test, deploy và docs.
-- [ ] `N3` Cấu hình nhánh `dev` và quy tắc pull request.
+- [x] `N3` Cấu hình nhánh `main` và quy tắc pull request.
 - [x] `N3` Cấu hình Conventional Commits.
 - [x] `N3` Tạo file biến môi trường mẫu.
 - [x] `N3` Bảo đảm secret không được commit.
 
 ### Backend skeleton
 
-- [ ] `N1` Tạo cấu trúc tầng `api/business/data/security/bootstrap`.
+- [x] `N1` Tạo cấu trúc tầng `api/business/data/security/bootstrap`.
 - [x] `N1` Tạo các module auth, catalog, cinema, scheduling và booking.
 - [x] `N1` Tạo cấu hình ứng dụng theo môi trường.
 - [x] `N1` Tạo `GET /health`.
@@ -70,7 +70,7 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 - [x] `ALL` Ứng dụng monolith khởi động thành công.
 - [x] `ALL` `GET /health` trả về `200`.
 - [x] `ALL` Trang frontend được mở từ cùng ứng dụng.
-- [ ] `ALL` CI chạy xanh.
+- [x] `ALL` CI chạy xanh.
 - [x] `ALL` Business layer vượt kiểm tra `import-linter`.
 
 ---
