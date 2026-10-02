@@ -32,46 +32,46 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Repository và quy trình
 
-- [ ] `N3` Tạo cấu trúc repository cho backend, frontend, test, deploy và docs.
+- [x] `N3` Tạo cấu trúc repository cho backend, frontend, test, deploy và docs.
 - [ ] `N3` Cấu hình nhánh `dev` và quy tắc pull request.
-- [ ] `N3` Cấu hình Conventional Commits.
-- [ ] `N3` Tạo file biến môi trường mẫu.
-- [ ] `N3` Bảo đảm secret không được commit.
+- [x] `N3` Cấu hình Conventional Commits.
+- [x] `N3` Tạo file biến môi trường mẫu.
+- [x] `N3` Bảo đảm secret không được commit.
 
 ### Backend skeleton
 
 - [ ] `N1` Tạo cấu trúc tầng `api/business/data/security/bootstrap`.
-- [ ] `N1` Tạo các module auth, catalog, cinema, scheduling và booking.
-- [ ] `N1` Tạo cấu hình ứng dụng theo môi trường.
-- [ ] `N1` Tạo `GET /health`.
-- [ ] `N1` Tạo error response thống nhất.
-- [ ] `N1` Tạo request ID middleware.
+- [x] `N1` Tạo các module auth, catalog, cinema, scheduling và booking.
+- [x] `N1` Tạo cấu hình ứng dụng theo môi trường.
+- [x] `N1` Tạo `GET /health`.
+- [x] `N1` Tạo error response thống nhất.
+- [x] `N1` Tạo request ID middleware.
 
 ### Frontend skeleton
 
-- [ ] `N2` Khởi tạo SPA TypeScript.
-- [ ] `N2` Cấu hình router.
-- [ ] `N2` Tạo app shell và layout cơ bản.
-- [ ] `N2` Tạo design token ban đầu.
-- [ ] `N2` Tạo API client cơ bản.
-- [ ] `N2` Tạo trang lỗi, loading và empty state dùng chung.
+- [x] `N2` Khởi tạo SPA TypeScript.
+- [x] `N2` Cấu hình router.
+- [x] `N2` Tạo app shell và layout cơ bản.
+- [x] `N2` Tạo design token ban đầu.
+- [x] `N2` Tạo API client cơ bản.
+- [x] `N2` Tạo trang lỗi, loading và empty state dùng chung.
 
 ### Kiểm tra kiến trúc và CI
 
-- [ ] `N3` Cấu hình backend lint/format.
-- [ ] `N3` Cấu hình frontend lint/type check.
-- [ ] `N3` Cấu hình `import-linter`.
-- [ ] `N3` Cấu hình CI chạy lint, test và build.
-- [ ] `N3` Cấu hình PostgreSQL cho môi trường test.
-- [ ] `ALL` Xác nhận frontend build được phục vụ bởi FastAPI.
+- [x] `N3` Cấu hình backend lint/format.
+- [x] `N3` Cấu hình frontend lint/type check.
+- [x] `N3` Cấu hình `import-linter`.
+- [x] `N3` Cấu hình CI chạy lint, test và build.
+- [x] `N3` Cấu hình PostgreSQL cho môi trường test.
+- [x] `ALL` Xác nhận frontend build được phục vụ bởi FastAPI.
 
 **Nghiệm thu Mốc A**
 
-- [ ] `ALL` Ứng dụng monolith khởi động thành công.
-- [ ] `ALL` `GET /health` trả về `200`.
-- [ ] `ALL` Trang frontend được mở từ cùng ứng dụng.
+- [x] `ALL` Ứng dụng monolith khởi động thành công.
+- [x] `ALL` `GET /health` trả về `200`.
+- [x] `ALL` Trang frontend được mở từ cùng ứng dụng.
 - [ ] `ALL` CI chạy xanh.
-- [ ] `ALL` Business layer vượt kiểm tra `import-linter`.
+- [x] `ALL` Business layer vượt kiểm tra `import-linter`.
 
 ---
 
