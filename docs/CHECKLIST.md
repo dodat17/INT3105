@@ -79,13 +79,13 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Domain và database
 
-- [ ] `N1` Tạo User entity và Role enum.
-- [ ] `N1` Tạo Movie entity.
-- [ ] `N1` Tạo UserRepository và MovieRepository ports.
-- [ ] `N1` Tạo ORM models cho users và movies.
-- [ ] `N1` Tạo migration cho users và movies.
-- [ ] `N1` Tạo seed tài khoản ADMIN.
-- [ ] `N1` Tạo seed phim mẫu.
+- [x] `N1` Tạo User entity và Role enum.
+- [x] `N1` Tạo Movie entity.
+- [x] `N1` Tạo UserRepository và MovieRepository ports.
+- [x] `N1` Tạo ORM models cho users và movies.
+- [x] `N1` Tạo migration cho users và movies.
+- [x] `N1` Tạo seed tài khoản ADMIN.
+- [x] `N1` Tạo seed phim mẫu.
 
 ### Authentication backend
 
