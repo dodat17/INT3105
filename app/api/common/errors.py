@@ -4,18 +4,41 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.domain.errors import (
+    BusinessRuleViolation,
+    DomainError,
+    EmailAlreadyUsedError,
+    ForbiddenError,
+    InvalidCredentialsError,
+    InvalidTokenError,
+    NotFoundError,
+)
+
+UNAUTHORIZED = (401, "UNAUTHORIZED", "Yêu cầu đăng nhập.")
+
+# status, code, default message
+_DOMAIN_ERRORS: dict[type[DomainError], tuple[int, str, str]] = {
+    NotFoundError: (404, "NOT_FOUND", "Không tìm thấy tài nguyên."),
+    ForbiddenError: (403, "FORBIDDEN", "Bạn không có quyền thực hiện thao tác này."),
+    BusinessRuleViolation: (400, "BUSINESS_RULE_VIOLATION", "Vi phạm quy tắc nghiệp vụ."),
+    EmailAlreadyUsedError: (409, "EMAIL_ALREADY_USED", "Email đã được sử dụng."),
+    InvalidCredentialsError: (401, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng."),
+    InvalidTokenError: UNAUTHORIZED,
+}
+
 
 def _request_id(request: Request) -> str:
     return str(getattr(request.state, "request_id", "unknown"))
 
 
-def _error_response(
+def error_response(
     request: Request,
     *,
     status_code: int,
     code: str,
     message: str,
     details: Any | None = None,
+    headers: dict[str, str] | None = None,
 ) -> JSONResponse:
     error: dict[str, Any] = {
         "code": code,
@@ -24,14 +47,24 @@ def _error_response(
     }
     if details is not None:
         error["details"] = details
-    return JSONResponse(status_code=status_code, content={"error": error})
+    return JSONResponse(status_code=status_code, content={"error": error}, headers=headers)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(DomainError)
+    async def handle_domain_error(request: Request, exc: DomainError) -> JSONResponse:
+        status_code, code, default_message = _DOMAIN_ERRORS[type(exc)]
+        return error_response(
+            request,
+            status_code=status_code,
+            code=code,
+            message=str(exc) or default_message,
+        )
+
     @app.exception_handler(HTTPException)
     async def handle_http_exception(request: Request, exc: HTTPException) -> JSONResponse:
         message = exc.detail if isinstance(exc.detail, str) else "Yêu cầu không hợp lệ."
-        return _error_response(
+        return error_response(
             request,
             status_code=exc.status_code,
             code="HTTP_ERROR",
@@ -42,7 +75,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def handle_validation_error(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
-        return _error_response(
+        return error_response(
             request,
             status_code=400,
             code="VALIDATION_ERROR",
