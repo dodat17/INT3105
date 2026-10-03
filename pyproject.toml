@@ -5,6 +5,7 @@ description = "Movie booking modular monolith"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.14,<2",
+    "bcrypt>=4.2,<6",
     "fastapi>=0.115,<1",
     "psycopg[binary]>=3.2,<4",
     "pydantic-settings>=2.7,<3",

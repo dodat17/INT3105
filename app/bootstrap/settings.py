@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(default="development-only-secret-change-me-123456")
     jwt_algorithm: str = "HS256"
     jwt_ttl_seconds: int = 3600
+    bcrypt_rounds: int = 12
     hold_ttl_seconds: int = 300
     max_active_holds: int = 3
     db_pool_size: int = 10
