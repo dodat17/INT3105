@@ -14,6 +14,7 @@ from app.api.common.request_id import RequestIdMiddleware
 from app.api.router import root_router
 from app.bootstrap.settings import Settings, get_settings
 from app.domain.auth.service import AuthService
+from app.domain.catalog.service import MovieService
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.persistence.uow import SqlAlchemyUnitOfWork, create_session_factory
 from app.infrastructure.security.passwords import BcryptPasswordHasher
@@ -48,6 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.auth_service = AuthService(
         uow_factory, BcryptPasswordHasher(settings.bcrypt_rounds), tokens, SystemClock()
     )
+    app.state.movie_service = MovieService(uow_factory)
     # Added last runs first: request ID wraps authentication so 401s carry it too.
     app.add_middleware(AuthMiddleware, tokens=tokens)
     app.add_middleware(RequestIdMiddleware)
