@@ -1,0 +1,80 @@
+.page-heading { margin-bottom: 2.5rem; }
+.page-heading > span { padding: 0.5rem 0.8rem; color: var(--color-primary); background: #eaf4fc; border-radius: 2rem; font-size: 0.75rem; }
+
+.ticket-list { display: grid; gap: 1rem; }
+
+.ticket-card {
+  display: grid;
+  grid-template-columns: 11rem 1fr auto;
+  gap: 2rem;
+  align-items: center;
+  overflow: hidden;
+  background: white;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-large);
+  box-shadow: 0 0.5rem 1.5rem rgb(20 52 82 / 7%);
+}
+
+.ticket-card.cancelled { opacity: 0.58; }
+
+.ticket-code {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.5rem;
+  color: white;
+  background: var(--color-primary);
+}
+
+.ticket-code span,
+.status-badge { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; }
+.status-badge { color: var(--color-accent-dark); }
+.ticket-main { padding: 1.5rem 0; }
+.ticket-main h2 { margin: 0.4rem 0; color: var(--color-primary); font-size: 1.55rem; }
+.ticket-main p { color: var(--color-muted); font-size: 0.8rem; }
+.ticket-details { display: flex; gap: 2rem; font-size: 0.85rem; }
+.ticket-card > button { margin-right: 2rem; }
+
+.centered-state {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  min-height: 65vh;
+  padding: 4rem 1.25rem;
+  background: white;
+  text-align: center;
+}
+
+.centered-state h1 {
+  max-width: 14ch;
+  margin-bottom: 1.25rem;
+  color: var(--color-primary);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1.05;
+}
+
+.centered-state > p:not(.section-index) { max-width: 36rem; color: var(--color-muted); }
+.centered-state.compact { min-height: 20rem; border: 1px dashed var(--color-line); border-radius: var(--radius-large); }
+
+.admin-grid { display: grid; grid-template-columns: minmax(18rem, 0.4fr) minmax(0, 1fr); gap: clamp(2rem, 6vw, 5rem); }
+
+.admin-form {
+  display: grid;
+  gap: 1.25rem;
+  align-self: start;
+  padding: 1.75rem;
+  background: var(--color-paper-deep);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-large);
+}
+
+.admin-form label { display: grid; gap: 0.4rem; color: var(--color-muted); font-size: 0.75rem; font-weight: 600; }
+
+.admin-list-heading,
+.admin-movie-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.admin-list-heading { border-bottom: 2px solid var(--color-primary); }
+.admin-movie-row { padding: 1.1rem 0; border-bottom: 1px solid var(--color-line); }
+.admin-movie-row i { width: 0.65rem; height: 2.75rem; border-radius: 1rem; }
+.admin-movie-row div { display: grid; flex: 1; gap: 0.25rem; }
+.admin-movie-row span { color: var(--color-muted); font-size: 0.75rem; }

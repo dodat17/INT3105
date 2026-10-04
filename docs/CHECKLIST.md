@@ -119,11 +119,11 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Frontend catalog
 
-- [ ] `N2` Tạo trang danh sách phim.
+- [x] `N2` Tạo trang danh sách phim.
 - [ ] `N2` Tạo tìm kiếm và phân trang.
 - [ ] `N2` Tạo trang chi tiết phim.
-- [ ] `N2` Tạo trang ADMIN quản lý phim.
-- [ ] `N2` Tạo form thêm phim.
+- [x] `N2` Tạo trang ADMIN quản lý phim.
+- [x] `N2` Tạo form thêm phim.
 - [ ] `N2` Tạo confirm dialog khi xóa phim.
 
 ### Kiểm thử
@@ -240,13 +240,13 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Frontend chọn ghế
 
-- [ ] `N2` Tạo SeatMap.
+- [x] `N2` Tạo SeatMap.
 - [ ] `N2` Hiển thị STANDARD, VIP, BOOKED và SELECTED.
-- [ ] `N2` Không cho chọn ghế BOOKED.
-- [ ] `N2` Giới hạn tối đa 8 ghế.
+- [x] `N2` Không cho chọn ghế BOOKED.
+- [x] `N2` Giới hạn tối đa 8 ghế.
 - [ ] `N2` Hiển thị giá từng ghế.
-- [ ] `N2` Hiển thị tổng giá dự kiến.
-- [ ] `N2` Tạo BookingSummary.
+- [x] `N2` Hiển thị tổng giá dự kiến.
+- [x] `N2` Tạo BookingSummary.
 - [ ] `N2` Gửi yêu cầu đặt vé.
 - [ ] `N2` Dùng tổng tiền từ server làm kết quả chính thức.
 - [ ] `N2` Xử lý `409 SEAT_UNAVAILABLE`.
@@ -254,11 +254,11 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Frontend vé của tôi
 
-- [ ] `N2` Tạo danh sách booking.
+- [x] `N2` Tạo danh sách booking.
 - [ ] `N2` Lọc theo CONFIRMED/CANCELLED.
 - [ ] `N2` Tạo trang chi tiết booking.
-- [ ] `N2` Tạo luồng hủy booking.
-- [ ] `N2` Hiển thị đúng lịch sử ghế sau khi hủy.
+- [x] `N2` Tạo luồng hủy booking.
+- [x] `N2` Hiển thị đúng lịch sử ghế sau khi hủy.
 
 ### Kiểm thử nghiệp vụ
 
@@ -290,17 +290,17 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ## 5. Mốc E — Hoàn thiện Frontend
 
-- [ ] `N2` Hoàn thiện design system.
-- [ ] `N2` Hoàn thiện responsive từ 360 px.
+- [x] `N2` Hoàn thiện design system.
+- [x] `N2` Hoàn thiện responsive từ 360 px.
 - [ ] `N2` Hoàn thiện loading state.
 - [ ] `N2` Hoàn thiện empty state.
 - [ ] `N2` Hoàn thiện error state.
 - [ ] `N2` Hoàn thiện success feedback.
-- [ ] `N2` Hiển thị tiền theo định dạng `vi-VN`.
+- [x] `N2` Hiển thị tiền theo định dạng `vi-VN`.
 - [ ] `N2` Hiển thị thời gian theo múi giờ đã chốt.
 - [ ] `N2` Kiểm tra focus và điều hướng bàn phím.
-- [ ] `N2` Thêm text thay thế cho trạng thái ghế.
-- [ ] `N2` Không dùng màu làm tín hiệu duy nhất.
+- [x] `N2` Thêm text thay thế cho trạng thái ghế.
+- [x] `N2` Không dùng màu làm tín hiệu duy nhất.
 - [ ] `N2` Cấu hình CSP phù hợp.
 - [ ] `N2` Kiểm tra không chèn HTML không tin cậy.
 - [ ] `N2` Tối ưu kích thước bundle.

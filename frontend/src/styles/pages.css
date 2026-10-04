@@ -1,0 +1,108 @@
+.booking-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 23rem;
+  min-height: calc(100vh - 4.75rem);
+  background: white;
+}
+
+.seat-area { padding: 3.5rem max(1.25rem, calc((100vw - 1180px) / 2)); }
+
+.seat-area h1 {
+  margin-bottom: 0.5rem;
+  color: var(--color-primary);
+  font-size: clamp(2.3rem, 4vw, 4rem);
+  letter-spacing: -0.045em;
+}
+
+.back-link { display: inline-block; margin-bottom: 2rem; color: var(--color-primary); font-size: 0.85rem; }
+.showtime-meta { color: var(--color-muted); }
+
+.screen {
+  height: 3rem;
+  margin: 3rem auto 2rem;
+  border-top: 5px solid var(--color-primary);
+  border-radius: 50%;
+  text-align: center;
+}
+
+.screen span { position: relative; top: 0.65rem; color: var(--color-muted); font-size: 0.62rem; letter-spacing: 0.18em; }
+
+.seat-map {
+  display: grid;
+  gap: 0.55rem;
+  width: min(100%, 40rem);
+  margin-inline: auto;
+  overflow-x: auto;
+}
+
+.seat-row {
+  display: grid;
+  grid-template-columns: 1rem repeat(10, minmax(2rem, 1fr));
+  gap: 0.45rem;
+  align-items: center;
+  min-width: 34rem;
+}
+
+.seat-row > span { color: var(--color-muted); font-size: 0.72rem; }
+
+.seat {
+  aspect-ratio: 1.15;
+  color: var(--color-primary);
+  background: white;
+  border: 1px solid #aabbd0;
+  border-radius: 0.35rem 0.35rem 0.7rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.seat:hover:not(:disabled),
+.seat.selected { color: white; background: var(--color-accent); border-color: var(--color-accent); }
+
+.seat.booked {
+  color: #98a2af;
+  background: #e6eaf0;
+  border-color: #e6eaf0;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.seat-legend { display: flex; justify-content: center; gap: 1.5rem; margin-top: 1.75rem; color: var(--color-muted); font-size: 0.72rem; }
+.seat-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+
+.legend-dot { width: 0.75rem; height: 0.75rem; border: 1px solid #aabbd0; border-radius: 0.15rem; }
+.legend-dot.selected { background: var(--color-accent); border-color: var(--color-accent); }
+.legend-dot.booked { background: #e6eaf0; border-color: #e6eaf0; }
+
+.booking-summary {
+  padding: 3rem 2rem;
+  color: var(--color-ink);
+  background: var(--color-paper-deep);
+  border-left: 1px solid var(--color-line);
+}
+
+.booking-summary .section-index { color: var(--color-accent-dark); }
+.booking-summary h2,
+.admin-form h2,
+.admin-list h2 { color: var(--color-primary); font-size: 1.8rem; }
+
+.booking-summary dl { margin: 2rem 0; }
+
+.booking-summary dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 0.82rem;
+}
+
+.booking-summary dt { color: var(--color-muted); }
+.booking-summary dd { margin: 0; font-weight: 600; text-align: right; }
+
+.summary-total { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin: 1.75rem 0; }
+.summary-total strong { color: var(--color-accent-dark); font-size: 1.7rem; }
+.full-width { width: 100%; }
+
+.summary-note,
+.form-notice { margin-top: 1rem; color: var(--color-muted); font-size: 0.75rem; line-height: 1.5; }
