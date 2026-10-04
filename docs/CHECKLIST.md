@@ -89,23 +89,23 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Authentication backend
 
-- [ ] `N1` Implement đăng ký CUSTOMER.
-- [ ] `N1` Implement đăng nhập.
-- [ ] `N1` Implement bcrypt PasswordHasher.
-- [ ] `N1` Implement JWT TokenService.
-- [ ] `N1` Implement AuthMiddleware mặc định chặn.
-- [ ] `N1` Implement `POST /auth/register`.
-- [ ] `N1` Implement `POST /auth/login`.
-- [ ] `N1` Implement `GET /auth/me`.
-- [ ] `N1` Cấu hình Bearer security scheme trong OpenAPI.
+- [x] `N1` Implement đăng ký CUSTOMER.
+- [x] `N1` Implement đăng nhập.
+- [x] `N1` Implement bcrypt PasswordHasher.
+- [x] `N1` Implement JWT TokenService.
+- [x] `N1` Implement AuthMiddleware mặc định chặn.
+- [x] `N1` Implement `POST /auth/register`.
+- [x] `N1` Implement `POST /auth/login`.
+- [x] `N1` Implement `GET /auth/me`.
+- [x] `N1` Cấu hình Bearer security scheme trong OpenAPI.
 
 ### Movie backend
 
-- [ ] `N1` Implement danh sách phim có tìm kiếm và phân trang.
-- [ ] `N1` Implement chi tiết phim.
-- [ ] `N1` Implement ADMIN tạo phim.
-- [ ] `N1` Implement ADMIN xóa phim.
-- [ ] `N1` Áp dụng BR-01, BR-02, BR-03 và phần liên quan của BR-12.
+- [x] `N1` Implement danh sách phim có tìm kiếm và phân trang.
+- [x] `N1` Implement chi tiết phim.
+- [x] `N1` Implement ADMIN tạo phim.
+- [x] `N1` Implement ADMIN xóa phim.
+- [ ] `N1` Áp dụng BR-01, BR-02, BR-03 và phần liên quan của BR-12. — BR-12 (chặn xóa phim đã có vé CONFIRMED) chờ bảng suất chiếu/booking ở Mốc C/D.
 
 ### Frontend authentication
 
@@ -128,13 +128,13 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Kiểm thử
 
-- [ ] `N1` Unit test email trùng và mật khẩu không hợp lệ.
-- [ ] `N1` API test đăng ký, đăng nhập và `/auth/me`.
-- [ ] `N1` API test CUSTOMER không gọi được API ADMIN.
+- [x] `N1` Unit test email trùng và mật khẩu không hợp lệ.
+- [x] `N1` API test đăng ký, đăng nhập và `/auth/me`.
+- [x] `N1` API test CUSTOMER không gọi được API ADMIN.
 - [ ] `N2` Test form đăng ký và đăng nhập.
 - [ ] `N2` Test route guard.
 - [ ] `N3` E2E đăng ký → đăng nhập → xem phim.
-- [ ] `N3` Security test token thiếu, sai và hết hạn.
+- [x] `N3` Security test token thiếu, sai và hết hạn.
 
 **Nghiệm thu Mốc B**
 
