@@ -12,6 +12,8 @@ from app.domain.errors import (
     InvalidCredentialsError,
     InvalidTokenError,
     NotFoundError,
+    RoomNameAlreadyUsedError,
+    ShowtimeOverlapError,
 )
 
 UNAUTHORIZED = (401, "UNAUTHORIZED", "Yêu cầu đăng nhập.")
@@ -24,6 +26,12 @@ _DOMAIN_ERRORS: dict[type[DomainError], tuple[int, str, str]] = {
     EmailAlreadyUsedError: (409, "EMAIL_ALREADY_USED", "Email đã được sử dụng."),
     InvalidCredentialsError: (401, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng."),
     InvalidTokenError: UNAUTHORIZED,
+    RoomNameAlreadyUsedError: (409, "ROOM_NAME_ALREADY_USED", "Tên phòng đã tồn tại."),
+    ShowtimeOverlapError: (
+        409,
+        "SHOWTIME_OVERLAP",
+        "Suất chiếu bị trùng giờ với một suất khác trong cùng phòng.",
+    ),
 }
 
 
