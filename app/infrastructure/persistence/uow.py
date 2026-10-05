@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.infrastructure.persistence.repositories import (
     SqlAlchemyMovieRepository,
+    SqlAlchemyRoomRepository,
+    SqlAlchemyShowtimeRepository,
     SqlAlchemyUserRepository,
 )
 
@@ -25,6 +27,8 @@ class SqlAlchemyUnitOfWork:
         self._session = self._session_factory()
         self.users = SqlAlchemyUserRepository(self._session)
         self.movies = SqlAlchemyMovieRepository(self._session)
+        self.rooms = SqlAlchemyRoomRepository(self._session)
+        self.showtimes = SqlAlchemyShowtimeRepository(self._session)
         return self
 
     def __exit__(
