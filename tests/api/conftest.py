@@ -2,6 +2,7 @@ import os
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -89,3 +90,33 @@ def admin_token(client: TestClient, settings: Settings) -> str:
         )
         uow.commit()
     return login(client, ADMIN_EMAIL)
+
+
+def create_room(client: TestClient, token: str, **overrides: Any) -> Any:
+    body = {"name": "Phòng 1", "rows": 5, "cols": 8, "vipRows": [4, 5]}
+    return client.post("/api/v1/rooms", json={**body, **overrides}, headers=auth_header(token))
+
+
+def create_showtime(
+    client: TestClient, token: str, setup: dict[str, str], starts_at: str, **overrides: Any
+) -> Any:
+    body = {
+        "movieId": setup["movie"],
+        "roomId": setup["room"],
+        "startsAt": starts_at,
+        "basePrice": 90000,
+    }
+    return client.post("/api/v1/showtimes", json={**body, **overrides}, headers=auth_header(token))
+
+
+@pytest.fixture
+def setup(client: TestClient, admin_token: str) -> dict[str, str]:
+    """One 120-minute movie, "Phòng 1" (3x4, row C is VIP) and a 1-seat "Phòng 2"."""
+    movie = client.post(
+        "/api/v1/movies",
+        json={"title": "Mai", "durationMinutes": 120},
+        headers=auth_header(admin_token),
+    ).json()
+    room = create_room(client, admin_token, rows=3, cols=4, vipRows=[3]).json()
+    other = create_room(client, admin_token, name="Phòng 2", rows=1, cols=1, vipRows=[]).json()
+    return {"movie": movie["id"], "room": room["id"], "other_room": other["id"]}
