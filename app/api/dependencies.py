@@ -5,6 +5,7 @@ from fastapi import Depends, Request
 from app.domain.auth.service import AuthService
 from app.domain.catalog.service import MovieService
 from app.domain.cinema.service import RoomService
+from app.domain.scheduling.service import ShowtimeService
 
 
 def get_auth_service(request: Request) -> AuthService:
@@ -19,6 +20,11 @@ def get_room_service(request: Request) -> RoomService:
     return cast(RoomService, request.app.state.room_service)
 
 
+def get_showtime_service(request: Request) -> ShowtimeService:
+    return cast(ShowtimeService, request.app.state.showtime_service)
+
+
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 MovieServiceDep = Annotated[MovieService, Depends(get_movie_service)]
 RoomServiceDep = Annotated[RoomService, Depends(get_room_service)]
+ShowtimeServiceDep = Annotated[ShowtimeService, Depends(get_showtime_service)]

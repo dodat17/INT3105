@@ -1,6 +1,7 @@
 import logging
 from functools import partial
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +17,7 @@ from app.bootstrap.settings import Settings, get_settings
 from app.domain.auth.service import AuthService
 from app.domain.catalog.service import MovieService
 from app.domain.cinema.service import RoomService
+from app.domain.scheduling.service import ShowtimeService
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.persistence.uow import SqlAlchemyUnitOfWork, create_session_factory
 from app.infrastructure.security.passwords import BcryptPasswordHasher
@@ -52,6 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.movie_service = MovieService(uow_factory)
     app.state.room_service = RoomService(uow_factory)
+    app.state.showtime_service = ShowtimeService(uow_factory, ZoneInfo(settings.cinema_timezone))
     # Added last runs first: request ID wraps authentication so 401s carry it too.
     app.add_middleware(AuthMiddleware, tokens=tokens)
     app.add_middleware(RequestIdMiddleware)
