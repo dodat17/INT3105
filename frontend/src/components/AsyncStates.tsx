@@ -17,10 +17,10 @@ export function LoadingState() {
   return <MessageState title="Đang mở màn" message="Nội dung đang được chuẩn bị." />;
 }
 
-export function EmptyState() {
-  return <MessageState title="Chưa có suất chiếu" message="Hãy quay lại sau để xem lịch mới." />;
+export function EmptyState({ title = 'Chưa có dữ liệu', message = 'Hãy quay lại sau.' }: Partial<MessageStateProps>) {
+  return <MessageState title={title} message={message} />;
 }
 
-export function ErrorState() {
-  return <MessageState title="Có lỗi xảy ra" message="Vui lòng thử lại sau ít phút." />;
+export function ErrorState({ message = 'Vui lòng thử lại sau ít phút.' }: Pick<Partial<MessageStateProps>, 'message'>) {
+  return <MessageState title="Có lỗi xảy ra" message={message} />;
 }

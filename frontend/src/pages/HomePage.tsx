@@ -1,86 +1,78 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 
 import type { AppContext } from '../app/AppShell';
-import { dates, showtimes } from '../data/mockData';
+import { EmptyState, ErrorState, LoadingState } from '../components/AsyncStates';
 
-const formatDay = (value: string) =>
-  new Intl.DateTimeFormat('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(
-    new Date(`${value}T00:00:00`),
-  );
+const movieAccent = (movieId: string) => {
+  const colors = ['#e2583e', '#167a78', '#bd8b32', '#4d7e45', '#295d73'];
+  const sum = [...movieId].reduce((total, character) => total + character.charCodeAt(0), 0);
+  return colors[sum % colors.length];
+};
 
 export function HomePage() {
-  const { movies } = useOutletContext<AppContext>();
+  const { loadMovies, movies, moviesError, moviesLoading } = useOutletContext<AppContext>();
   const [query, setQuery] = useState('');
-  const [activeDate, setActiveDate] = useState(dates[0]);
+  const [activeQuery, setActiveQuery] = useState('');
 
-  const visibleMovies = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase('vi');
-    if (!normalizedQuery) return movies;
-    return movies.filter((movie) =>
-      `${movie.title} ${movie.genre}`.toLocaleLowerCase('vi').includes(normalizedQuery),
-    );
-  }, [movies, query]);
+  const search = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setActiveQuery(query.trim());
+    void loadMovies(query, 1);
+  };
+
+  const changePage = (page: number) => {
+    void loadMovies(activeQuery, page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <section className="catalog-section" aria-labelledby="catalog-title">
-        <div className="catalog-toolbar">
-          <h2 id="catalog-title">Phim đang chiếu</h2>
-          <label className="search-field">
-            <span>Tìm phim</span>
+      <div className="catalog-toolbar">
+        <h2 id="catalog-title">Phim đang chiếu</h2>
+        <form className="search-field" onSubmit={search}>
+          <span>Tìm phim</span>
+          <div className="search-control">
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Tên phim hoặc thể loại"
+              placeholder="Tên phim"
             />
-          </label>
-        </div>
-
-        <div className="date-tabs" aria-label="Chọn ngày chiếu">
-          {dates.map((date) => (
-            <button
-              className={date === activeDate ? 'date-tab active' : 'date-tab'}
-              key={date}
-              type="button"
-              onClick={() => setActiveDate(date)}
-            >
-              {formatDay(date)}
-            </button>
-          ))}
-        </div>
-
-        {visibleMovies.length ? (
-          <div className="movie-grid">
-            {visibleMovies.map((movie, index) => (
-              <article className="movie-card" key={movie.id}>
-                <div className="poster" style={{ '--poster-accent': movie.accent } as CSSProperties}>
-                  {movie.poster && <img src={movie.poster} alt={`Poster minh họa ${movie.title}`} />}
-                  <span>{movie.posterLabel}</span>
-                  <small>{movie.ageRating}</small>
-                </div>
-                <div className="movie-info">
-                  <p className="movie-number">{String(index + 1).padStart(2, '0')}</p>
-                  <h3>{movie.title}</h3>
-                  <p>{movie.genre} · {movie.duration} phút</p>
-                  <p className="movie-description">{movie.description}</p>
-                  <div className="showtime-list">
-                    {showtimes
-                      .filter(({ movieId, date }) => movieId === movie.id && date === activeDate)
-                      .map((showtime) => (
-                        <Link className="showtime-link" key={showtime.id} to={`/booking/${showtime.id}`}>
-                          <strong>{showtime.time}</strong>
-                          <span>{showtime.room}</span>
-                        </Link>
-                      ))}
-                  </div>
-                </div>
-              </article>
-            ))}
+            <button className="button button-dark" type="submit">Tìm</button>
           </div>
-        ) : (
-          <div className="empty-inline">Không tìm thấy phim phù hợp với “{query}”.</div>
-        )}
+        </form>
+      </div>
+
+      {moviesLoading ? <LoadingState /> : moviesError ? <ErrorState message={moviesError} /> :
+        movies.items.length ? (
+          <>
+            <div className="movie-grid">
+              {movies.items.map((movie, index) => (
+                <article className="movie-card" key={movie.id}>
+                  <div className="poster poster-placeholder" style={{ background: movieAccent(movie.id) }}>
+                    <span>{String((movies.page - 1) * movies.pageSize + index + 1).padStart(2, '0')}</span>
+                    <small>{movie.ageRating || 'P'}</small>
+                    <strong>{movie.title}</strong>
+                  </div>
+                  <div className="movie-info">
+                    <h3>{movie.title}</h3>
+                    <p>{movie.genre || 'Chưa phân loại'} · {movie.durationMinutes} phút</p>
+                    <p className="movie-description">{movie.description}</p>
+                    <Link className="button button-dark" to={`/movies/${movie.id}`}>Xem chi tiết</Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+            {movies.totalItems > movies.pageSize && (
+              <div className="pagination" aria-label="Phân trang phim">
+                <button className="text-button" disabled={movies.page === 1} onClick={() => changePage(movies.page - 1)} type="button">Trang trước</button>
+                <span>Trang {movies.page} / {Math.ceil(movies.totalItems / movies.pageSize)}</span>
+                <button className="text-button" disabled={movies.page * movies.pageSize >= movies.totalItems} onClick={() => changePage(movies.page + 1)} type="button">Trang sau</button>
+              </div>
+            )}
+          </>
+        ) : <EmptyState title="Không tìm thấy phim" message="Thử tìm với một tên phim khác." />}
     </section>
   );
 }

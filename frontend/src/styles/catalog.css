@@ -32,7 +32,8 @@
 }
 
 .search-field input,
-.admin-form input {
+.admin-form input,
+.admin-form textarea {
   width: 100%;
   padding: 0.8rem 0.9rem;
   color: var(--color-ink);
@@ -40,6 +41,10 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-small);
 }
+
+.admin-form textarea { resize: vertical; }
+
+.search-control { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
 
 .date-tabs {
   display: flex;
@@ -124,6 +129,15 @@
   border-radius: 0.25rem;
 }
 
+.poster-placeholder strong {
+  position: relative;
+  z-index: 2;
+  max-width: 9ch;
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.3vw, 2.2rem);
+  line-height: 1.05;
+}
+
 .movie-info { display: flex; flex-direction: column; padding: 1.15rem; }
 .movie-number { display: none; }
 .movie-info h3 { margin-bottom: 0.4rem; color: var(--color-primary); font-size: 1.05rem; }
@@ -150,3 +164,13 @@
 .showtime-link strong { font-size: 0.78rem; }
 
 .empty-inline { padding: 4rem 0; color: var(--color-muted); }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}

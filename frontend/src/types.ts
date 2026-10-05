@@ -2,40 +2,40 @@ export type Movie = {
   id: string;
   title: string;
   genre: string;
-  duration: number;
+  durationMinutes: number;
   ageRating: string;
   description: string;
-  accent: string;
-  posterLabel: string;
-  poster?: string;
 };
 
-export type Showtime = {
-  id: string;
-  movieId: string;
-  date: string;
-  time: string;
-  room: string;
-  price: number;
+export type MoviePage = {
+  items: Movie[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
 };
 
-export type BookingStatus = 'HELD' | 'CONFIRMED' | 'CANCELLED';
-
-export type Booking = {
+export type User = {
   id: string;
-  movieId: string;
-  showtimeId: string;
-  seats: string[];
-  total: number;
-  status: BookingStatus;
+  email: string;
+  fullName: string;
+  role: 'CUSTOMER' | 'ADMIN';
   createdAt: string;
 };
 
-export type UserRole = 'CUSTOMER' | 'ADMIN';
-
-export type MockUser = {
-  name: string;
+export type LoginPayload = {
   email: string;
-  role: UserRole;
+  password: string;
+};
+
+export type RegisterPayload = LoginPayload & {
+  fullName: string;
+};
+
+export type MoviePayload = {
+  title: string;
+  description: string;
+  durationMinutes: number;
+  genre: string;
+  ageRating: string;
 };
 

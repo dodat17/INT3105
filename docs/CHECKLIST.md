@@ -109,22 +109,22 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Frontend authentication
 
-- [ ] `N2` Tạo trang đăng ký.
-- [ ] `N2` Tạo trang đăng nhập.
-- [ ] `N2` Tạo auth state.
-- [ ] `N2` Lưu JWT theo phương án đã thống nhất.
-- [ ] `N2` Gọi `/auth/me` khi khởi động ứng dụng.
-- [ ] `N2` Xử lý JWT sai hoặc hết hạn.
-- [ ] `N2` Tạo route guard cho CUSTOMER và ADMIN.
+- [x] `N2` Tạo trang đăng ký.
+- [x] `N2` Tạo trang đăng nhập.
+- [x] `N2` Tạo auth state.
+- [x] `N2` Lưu JWT theo phương án đã thống nhất.
+- [x] `N2` Gọi `/auth/me` khi khởi động ứng dụng.
+- [x] `N2` Xử lý JWT sai hoặc hết hạn.
+- [x] `N2` Tạo route guard cho CUSTOMER và ADMIN.
 
 ### Frontend catalog
 
 - [x] `N2` Tạo trang danh sách phim.
-- [ ] `N2` Tạo tìm kiếm và phân trang.
-- [ ] `N2` Tạo trang chi tiết phim.
+- [x] `N2` Tạo tìm kiếm và phân trang.
+- [x] `N2` Tạo trang chi tiết phim.
 - [x] `N2` Tạo trang ADMIN quản lý phim.
 - [x] `N2` Tạo form thêm phim.
-- [ ] `N2` Tạo confirm dialog khi xóa phim.
+- [x] `N2` Tạo confirm dialog khi xóa phim.
 
 ### Kiểm thử
 

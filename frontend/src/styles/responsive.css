@@ -26,4 +26,5 @@
 @media (max-width: 520px) {
   .movie-grid { grid-template-columns: 1fr; }
   .seat-legend { align-items: start; flex-direction: column; }
+  .search-control { grid-template-columns: 1fr; }
 }

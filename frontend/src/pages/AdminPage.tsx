@@ -4,63 +4,67 @@ import { useOutletContext } from 'react-router-dom';
 import type { AppContext } from '../app/AppShell';
 
 export function AdminPage() {
-  const { addMovie, deleteMovie, login, movies, user } = useOutletContext<AppContext>();
+  const { addMovie, deleteMovie, movies } = useOutletContext<AppContext>();
   const [notice, setNotice] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  if (user?.role !== 'ADMIN') {
-    return (
-      <section className="centered-state">
-        <p className="section-index">KHU VỰC QUẢN TRỊ</p>
-        <h1>Dành cho người vận hành rạp.</h1>
-        <p>Chuyển sang tài khoản admin giả lập để thử các thao tác quản lý.</p>
-        <button className="button button-accent" type="button" onClick={() => login('ADMIN')}>
-          Vào với quyền Admin
-        </button>
-      </section>
-    );
-  }
-
-  const submitMovie = (event: FormEvent<HTMLFormElement>) => {
+  const submitMovie = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const title = String(form.get('title') ?? '').trim();
-    if (!title) return;
-    addMovie({
-      id: `${title.toLocaleLowerCase('vi').replaceAll(' ', '-')}-${Date.now()}`,
-      title,
-      genre: String(form.get('genre') ?? 'Chưa phân loại'),
-      duration: Number(form.get('duration')) || 90,
-      ageRating: 'T13',
-      description: 'Phim mới được thêm từ giao diện quản trị mock.',
-      accent: '#295d73',
-      posterLabel: 'NEW / SẮP RA MẮT',
-    });
-    event.currentTarget.reset();
-    setNotice(`Đã thêm “${title}” vào danh sách mock.`);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    setNotice('');
+    setSubmitting(true);
+    try {
+      const movie = await addMovie({
+        title: String(form.get('title') ?? '').trim(),
+        genre: String(form.get('genre') ?? '').trim(),
+        durationMinutes: Number(form.get('durationMinutes')),
+        ageRating: String(form.get('ageRating') ?? '').trim(),
+        description: String(form.get('description') ?? '').trim(),
+      });
+      formElement.reset();
+      setNotice(`Đã thêm “${movie.title}”.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể thêm phim.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const removeMovie = async (movieId: string, title: string) => {
+    if (!window.confirm(`Xóa “${title}” khỏi danh mục?`)) return;
+    try {
+      await deleteMovie(movieId);
+      setNotice(`Đã xóa “${title}”.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể xóa phim.');
+    }
   };
 
   return (
     <section className="admin-page">
       <div className="page-heading">
-        <div><p className="section-index">04 / QUẢN TRỊ</p><h1>Điều hành suất chiếu.</h1></div>
-        <span>Admin mock</span>
+        <div><p className="section-index">04 / QUẢN TRỊ</p><h1>Quản lý danh mục phim.</h1></div>
+        <span>Admin</span>
       </div>
       <div className="admin-grid">
         <form className="admin-form" onSubmit={submitMovie}>
           <h2>Thêm phim</h2>
           <label>Tên phim<input name="title" required /></label>
-          <label>Thể loại<input name="genre" placeholder="Ví dụ: Tâm lý" required /></label>
-          <label>Thời lượng (phút)<input min="30" name="duration" type="number" defaultValue="100" required /></label>
-          <button className="button button-accent" type="submit">Thêm vào danh mục</button>
+          <label>Thể loại<input name="genre" placeholder="Ví dụ: Tâm lý" /></label>
+          <label>Thời lượng (phút)<input min="1" max="600" name="durationMinutes" type="number" required /></label>
+          <label>Phân loại tuổi<input maxLength={10} name="ageRating" placeholder="T13" /></label>
+          <label>Mô tả<textarea maxLength={5000} name="description" rows={4} /></label>
+          <button className="button button-accent" disabled={submitting} type="submit">{submitting ? 'Đang thêm...' : 'Thêm vào danh mục'}</button>
           {notice && <p className="form-notice" role="status">{notice}</p>}
         </form>
         <div className="admin-list">
-          <div className="admin-list-heading"><h2>Danh mục phim</h2><span>{movies.length} phim</span></div>
-          {movies.map((movie) => (
+          <div className="admin-list-heading"><h2>Danh mục phim</h2><span>{movies.totalItems} phim</span></div>
+          {movies.items.map((movie) => (
             <div className="admin-movie-row" key={movie.id}>
-              <i style={{ background: movie.accent }} />
-              <div><strong>{movie.title}</strong><span>{movie.genre} · {movie.duration} phút</span></div>
-              <button className="text-button danger" type="button" onClick={() => deleteMovie(movie.id)}>Xóa</button>
+              <i />
+              <div><strong>{movie.title}</strong><span>{movie.genre || 'Chưa phân loại'} · {movie.durationMinutes} phút</span></div>
+              <button className="text-button danger" type="button" onClick={() => void removeMovie(movie.id, movie.title)}>Xóa</button>
             </div>
           ))}
         </div>

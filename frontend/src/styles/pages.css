@@ -106,3 +106,43 @@
 
 .summary-note,
 .form-notice { margin-top: 1rem; color: var(--color-muted); font-size: 0.75rem; line-height: 1.5; }
+
+.form-notice.error { color: #b62e2a; }
+
+.auth-page {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - 4.75rem);
+  padding: 3rem 1.25rem;
+  background: linear-gradient(135deg, #eaf4fc 0%, white 55%, #fff3df 100%);
+}
+
+.auth-card {
+  display: grid;
+  gap: 1.15rem;
+  width: min(100%, 28rem);
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  background: white;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-large);
+  box-shadow: 0 1rem 3rem rgb(20 52 82 / 12%);
+}
+
+.auth-card h1 { margin-bottom: 0.5rem; color: var(--color-primary); font-size: 2.4rem; }
+.auth-card label { display: grid; gap: 0.45rem; color: var(--color-muted); font-size: 0.75rem; font-weight: 700; }
+.auth-card input { width: 100%; padding: 0.85rem 0.9rem; border: 1px solid var(--color-line); border-radius: var(--radius-small); }
+.auth-switch { margin: 0; color: var(--color-muted); font-size: 0.8rem; text-align: center; }
+.auth-switch a { color: var(--color-primary); font-weight: 700; }
+
+.movie-detail {
+  min-height: calc(100vh - 4.75rem);
+  padding: 4rem max(1.25rem, calc((100vw - 900px) / 2));
+  background: white;
+}
+
+.movie-detail h1 { max-width: 14ch; margin-bottom: 0.75rem; color: var(--color-primary); font-size: clamp(2.7rem, 7vw, 5.5rem); line-height: 1; }
+.movie-meta { color: var(--color-accent-dark); font-weight: 700; }
+.movie-synopsis { max-width: 48rem; color: var(--color-muted); font-size: 1.05rem; line-height: 1.8; }
+.schedule-state { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--color-line); }
+.schedule-state h2 { color: var(--color-primary); }
+.schedule-state p { color: var(--color-muted); }

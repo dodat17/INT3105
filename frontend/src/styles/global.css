@@ -11,7 +11,8 @@ body {
 }
 
 button,
-input { font: inherit; }
+input,
+textarea { font: inherit; }
 
 button,
 a { -webkit-tap-highlight-color: transparent; }
@@ -19,6 +20,11 @@ a { -webkit-tap-highlight-color: transparent; }
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
+  outline: 3px solid rgb(243 154 36 / 45%);
+  outline-offset: 3px;
+}
+
+textarea:focus-visible {
   outline: 3px solid rgb(243 154 36 / 45%);
   outline-offset: 3px;
 }
@@ -133,6 +139,8 @@ h3 {
 }
 
 .text-button.danger { color: #c5403c; }
+.text-button:disabled { cursor: not-allowed; opacity: 0.4; }
+.button:disabled { cursor: wait; opacity: 0.65; }
 
 .section-index,
 .state-kicker {
@@ -145,6 +153,8 @@ h3 {
 
 .not-found,
 .message-state { padding: 5rem max(1.25rem, calc((100vw - 1180px) / 2)); }
+
+.message-state { text-align: center; }
 
 .button-link {
   display: inline-flex;
