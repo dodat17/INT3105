@@ -215,13 +215,13 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Domain và database
 
-- [ ] `N1` Tạo Booking và Ticket entities.
-- [ ] `N1` Tạo BookingStatus enum.
-- [ ] `N1` Tạo BookingRepository port.
-- [ ] `N1` Tạo ORM models cho bookings và tickets.
-- [ ] `N1` Tạo migration.
-- [ ] `N1` Tạo unique constraint `(showtime_id, seat_id)`.
-- [ ] `N1` Implement phương án lưu lịch sử ticket sau khi hủy.
+- [x] `N1` Tạo Booking và Ticket entities.
+- [x] `N1` Tạo BookingStatus enum.
+- [x] `N1` Tạo BookingRepository port.
+- [x] `N1` Tạo ORM models cho bookings và tickets.
+- [x] `N1` Tạo migration.
+- [x] `N1` Tạo unique constraint `(showtime_id, seat_id)`.
+- [x] `N1` Implement phương án lưu lịch sử ticket sau khi hủy.
 
 ### Booking backend
 

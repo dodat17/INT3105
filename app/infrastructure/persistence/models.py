@@ -96,3 +96,73 @@ class ShowtimeModel(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     base_price: Mapped[int] = mapped_column(BigInteger)
+
+
+class BookingModel(Base):
+    __tablename__ = "bookings"
+    __table_args__ = (
+        CheckConstraint("status IN ('HELD', 'CONFIRMED', 'CANCELLED', 'EXPIRED')", name="status"),
+        CheckConstraint("total_amount >= 0", name="total_amount_non_negative"),
+        CheckConstraint(
+            "(status = 'CONFIRMED' AND confirmed_at IS NOT NULL AND booking_code IS NOT NULL) "
+            "OR (status <> 'CONFIRMED' AND confirmed_at IS NULL AND booking_code IS NULL)",
+            name="confirmed_fields",
+        ),
+        CheckConstraint(
+            "(status = 'CANCELLED' AND cancelled_at IS NOT NULL) "
+            "OR (status <> 'CANCELLED' AND cancelled_at IS NULL)",
+            name="cancelled_fields",
+        ),
+        Index("ix_bookings_user_id_created_at_id", "user_id", "created_at", "id"),
+        Index("ix_bookings_user_id_status_expires_at", "user_id", "status", "expires_at"),
+        Index("ix_bookings_showtime_id_user_id_status", "showtime_id", "user_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    showtime_id: Mapped[UUID] = mapped_column(ForeignKey("showtimes.id", ondelete="RESTRICT"))
+    status: Mapped[str] = mapped_column(String(16))
+    total_amount: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    booking_code: Mapped[str | None] = mapped_column(String(16), unique=True, nullable=True)
+
+
+class TicketModel(Base):
+    __tablename__ = "tickets"
+    __table_args__ = (
+        UniqueConstraint("booking_id", "seat_id", name="uq_tickets_booking_seat"),
+        CheckConstraint("unit_price >= 0", name="unit_price_non_negative"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    booking_id: Mapped[UUID] = mapped_column(ForeignKey("bookings.id", ondelete="RESTRICT"))
+    seat_id: Mapped[UUID] = mapped_column(ForeignKey("seats.id", ondelete="RESTRICT"))
+    unit_price: Mapped[int] = mapped_column(BigInteger)
+
+
+class ShowtimeSeatModel(Base):
+    __tablename__ = "showtime_seats"
+    __table_args__ = (
+        CheckConstraint(
+            "(state = 'AVAILABLE' AND booking_id IS NULL AND hold_expires_at IS NULL) "
+            "OR (state = 'HELD' AND booking_id IS NOT NULL AND hold_expires_at IS NOT NULL) "
+            "OR (state = 'BOOKED' AND booking_id IS NOT NULL AND hold_expires_at IS NULL)",
+            name="state_fields",
+        ),
+        Index("ix_showtime_seats_booking_id", "booking_id"),
+    )
+
+    showtime_id: Mapped[UUID] = mapped_column(
+        ForeignKey("showtimes.id", ondelete="RESTRICT"), primary_key=True
+    )
+    seat_id: Mapped[UUID] = mapped_column(
+        ForeignKey("seats.id", ondelete="RESTRICT"), primary_key=True
+    )
+    state: Mapped[str] = mapped_column(String(12), default="AVAILABLE", server_default="AVAILABLE")
+    booking_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("bookings.id", ondelete="RESTRICT"), nullable=True
+    )
+    hold_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

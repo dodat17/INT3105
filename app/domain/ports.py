@@ -6,6 +6,7 @@ from typing import Protocol, Self
 from uuid import UUID
 
 from app.domain.auth.model import Actor, IssuedToken, Role, User
+from app.domain.booking.model import Booking
 from app.domain.catalog.model import Movie
 from app.domain.cinema.model import Room, Seat
 from app.domain.scheduling.model import Showtime
@@ -71,6 +72,11 @@ class ShowtimeRepository(Protocol):
     def delete(self, showtime_id: UUID) -> None: ...
 
 
+class BookingRepository(Protocol):
+    def get(self, booking_id: UUID) -> Booking | None: ...
+    def add(self, booking: Booking) -> None: ...
+
+
 class UnitOfWork(Protocol):
     @property
     def users(self) -> UserRepository: ...
@@ -80,6 +86,8 @@ class UnitOfWork(Protocol):
     def rooms(self) -> RoomRepository: ...
     @property
     def showtimes(self) -> ShowtimeRepository: ...
+    @property
+    def bookings(self) -> BookingRepository: ...
 
     def __enter__(self) -> Self: ...
 

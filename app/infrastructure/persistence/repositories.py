@@ -16,6 +16,7 @@ from app.infrastructure.persistence.models import (
     RoomModel,
     SeatModel,
     ShowtimeModel,
+    ShowtimeSeatModel,
     UserModel,
 )
 
@@ -262,6 +263,16 @@ class SqlAlchemyShowtimeRepository:
                 base_price=showtime.base_price,
             )
         )
+        seat_ids = self._session.scalars(
+            select(SeatModel.id).where(SeatModel.room_id == showtime.room_id)
+        )
+        self._session.add_all(
+            ShowtimeSeatModel(showtime_id=showtime.id, seat_id=seat_id, state="AVAILABLE")
+            for seat_id in seat_ids
+        )
 
     def delete(self, showtime_id: UUID) -> None:
+        self._session.execute(
+            delete(ShowtimeSeatModel).where(ShowtimeSeatModel.showtime_id == showtime_id)
+        )
         self._session.execute(delete(ShowtimeModel).where(ShowtimeModel.id == showtime_id))
