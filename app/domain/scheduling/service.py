@@ -67,10 +67,11 @@ class ShowtimeService:
 
     def delete_showtime(self, actor: Actor, showtime_id: UUID) -> None:
         require_admin(actor)
-        # BR-12 (no delete once CONFIRMED tickets exist) needs bookings (milestone D).
         with self._uow_factory() as uow:
             if uow.showtimes.get(showtime_id) is None:
                 raise NotFoundError
+            if uow.bookings.exists_for_showtime(showtime_id):
+                raise BusinessRuleViolation("Không thể xóa suất chiếu đã có booking.")
             uow.showtimes.delete(showtime_id)
             uow.commit()
 
@@ -83,13 +84,15 @@ class ShowtimeService:
             if room is None:
                 raise NotFoundError
             seats = uow.rooms.seats(room.id)
-        # Every seat is AVAILABLE until bookings exist (milestone D marks BOOKED ones).
+            statuses = uow.bookings.seat_statuses(showtime.id, uow.clock.now())
         return (
             showtime,
             room,
             [
                 SeatMapEntry(
-                    seat, seat_price(showtime.base_price, seat.seat_type), SeatStatus.AVAILABLE
+                    seat,
+                    seat_price(showtime.base_price, seat.seat_type),
+                    SeatStatus(statuses.get(seat.id, SeatStatus.AVAILABLE.value)),
                 )
                 for seat in seats
             ],

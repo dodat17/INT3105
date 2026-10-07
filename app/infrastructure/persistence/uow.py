@@ -4,6 +4,7 @@ from typing import Self
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.infrastructure.clock import DatabaseClock
 from app.infrastructure.persistence.booking_repository import SqlAlchemyBookingRepository
 from app.infrastructure.persistence.repositories import (
     SqlAlchemyMovieRepository,
@@ -31,6 +32,7 @@ class SqlAlchemyUnitOfWork:
         self.rooms = SqlAlchemyRoomRepository(self._session)
         self.showtimes = SqlAlchemyShowtimeRepository(self._session)
         self.bookings = SqlAlchemyBookingRepository(self._session)
+        self.clock = DatabaseClock(self._session)
         return self
 
     def __exit__(

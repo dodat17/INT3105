@@ -225,20 +225,20 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Booking backend
 
-- [ ] `N1` Implement CreateBooking.
-- [ ] `N1` Kiểm tra mỗi booking có 1–8 ghế.
-- [ ] `N1` Kiểm tra seat ID không trùng.
-- [ ] `N1` Kiểm tra ghế thuộc đúng phòng.
-- [ ] `N1` Kiểm tra suất chiếu chưa bắt đầu.
-- [ ] `N1` Kiểm tra ghế còn trống.
-- [ ] `N1` Tính giá từng vé và tổng tiền.
-- [ ] `N1` Flush để bắt lỗi unique constraint.
-- [ ] `N1` Map lỗi database thành `SEAT_UNAVAILABLE`.
-- [ ] `N1` Implement danh sách booking của tôi.
-- [ ] `N1` Implement chi tiết booking.
-- [ ] `N1` Implement hủy booking.
-- [ ] `N1` Implement API hỗ trợ ADMIN tra cứu booking.
-- [ ] `N1` Áp dụng BR-05 đến BR-12.
+- [x] `N1` Implement CreateBooking.
+- [x] `N1` Kiểm tra mỗi booking có 1–8 ghế.
+- [x] `N1` Kiểm tra seat ID không trùng.
+- [x] `N1` Kiểm tra ghế thuộc đúng phòng.
+- [x] `N1` Kiểm tra suất chiếu chưa bắt đầu.
+- [x] `N1` Kiểm tra ghế còn trống.
+- [x] `N1` Tính giá từng vé và tổng tiền.
+- [x] `N1` Flush để bắt lỗi unique constraint.
+- [x] `N1` Map lỗi database thành `SEAT_UNAVAILABLE`.
+- [x] `N1` Implement danh sách booking của tôi.
+- [x] `N1` Implement chi tiết booking.
+- [x] `N1` Implement hủy booking.
+- [x] `N1` Implement API hỗ trợ ADMIN tra cứu booking.
+- [x] `N1` Áp dụng BR-05 đến BR-12.
 
 ### Frontend chọn ghế
 
@@ -264,13 +264,13 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Kiểm thử nghiệp vụ
 
-- [ ] `N1` Test 0 ghế và hơn 8 ghế.
-- [ ] `N1` Test seat ID bị lặp.
-- [ ] `N1` Test ghế không thuộc phòng.
-- [ ] `N1` Test suất chiếu đã bắt đầu.
-- [ ] `N1` Test người khác xem/hủy booking.
-- [ ] `N1` Test ghế đã bán trả 409.
-- [ ] `N1` Test hủy vé rồi đặt lại được ghế.
+- [x] `N1` Test 0 ghế và hơn 8 ghế.
+- [x] `N1` Test seat ID bị lặp.
+- [x] `N1` Test ghế không thuộc phòng.
+- [x] `N1` Test suất chiếu đã bắt đầu.
+- [x] `N1` Test người khác xem/hủy booking.
+- [x] `N1` Test ghế đã bán trả 409.
+- [x] `N1` Test hủy vé rồi đặt lại được ghế.
 - [ ] `N1` Integration test bằng PostgreSQL thật.
 - [ ] `N2` Test chọn ghế bằng chuột và bàn phím.
 - [ ] `N2` Test xử lý 409.

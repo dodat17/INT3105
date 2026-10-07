@@ -15,6 +15,7 @@ from app.api.common.request_id import RequestIdMiddleware
 from app.api.router import root_router
 from app.bootstrap.settings import Settings, get_settings
 from app.domain.auth.service import AuthService
+from app.domain.booking.service import BookingService
 from app.domain.catalog.service import MovieService
 from app.domain.cinema.service import RoomService
 from app.domain.scheduling.service import ShowtimeService
@@ -55,6 +56,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.movie_service = MovieService(uow_factory)
     app.state.room_service = RoomService(uow_factory)
     app.state.showtime_service = ShowtimeService(uow_factory, ZoneInfo(settings.cinema_timezone))
+    app.state.booking_service = BookingService(
+        uow_factory,
+        settings.hold_ttl_seconds,
+        settings.hold_max_active_per_showtime,
+        settings.hold_max_active_total,
+    )
     # Added last runs first: request ID wraps authentication so 401s carry it too.
     app.add_middleware(AuthMiddleware, tokens=tokens)
     app.add_middleware(RequestIdMiddleware)

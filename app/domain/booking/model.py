@@ -3,6 +3,10 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
+from app.domain.catalog.model import Movie
+from app.domain.cinema.model import Room, Seat
+from app.domain.scheduling.model import Showtime
+
 
 class BookingStatus(StrEnum):
     HELD = "HELD"
@@ -38,3 +42,12 @@ class Booking:
         if self.status is BookingStatus.HELD and now >= self.expires_at:
             return BookingStatus.EXPIRED
         return self.status
+
+
+@dataclass(frozen=True)
+class BookingDetail:
+    booking: Booking
+    movie: Movie
+    showtime: Showtime
+    room: Room
+    seats: tuple[Seat, ...]

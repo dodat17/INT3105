@@ -1,18 +1,25 @@
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.domain.errors import (
+    BookingExpiredError,
     BusinessRuleViolation,
     DomainError,
+    DomainValidationError,
     EmailAlreadyUsedError,
     ForbiddenError,
+    HoldLimitExceededError,
+    InvalidBookingStateError,
     InvalidCredentialsError,
     InvalidTokenError,
     NotFoundError,
     RoomNameAlreadyUsedError,
+    SeatUnavailableError,
+    ShowtimeNotBookableError,
     ShowtimeOverlapError,
 )
 
@@ -31,6 +38,24 @@ _DOMAIN_ERRORS: dict[type[DomainError], tuple[int, str, str]] = {
         409,
         "SHOWTIME_OVERLAP",
         "Suất chiếu bị trùng giờ với một suất khác trong cùng phòng.",
+    ),
+    DomainValidationError: (400, "VALIDATION_ERROR", "Dữ liệu yêu cầu không hợp lệ."),
+    SeatUnavailableError: (409, "SEAT_UNAVAILABLE", "Một hoặc nhiều ghế không còn trống."),
+    BookingExpiredError: (409, "BOOKING_EXPIRED", "Booking đã hết thời gian giữ ghế."),
+    InvalidBookingStateError: (
+        409,
+        "INVALID_BOOKING_STATE",
+        "Trạng thái booking không cho phép thao tác này.",
+    ),
+    ShowtimeNotBookableError: (
+        409,
+        "SHOWTIME_NOT_BOOKABLE",
+        "Suất chiếu không còn nhận đặt vé.",
+    ),
+    HoldLimitExceededError: (
+        409,
+        "HOLD_LIMIT_EXCEEDED",
+        "Đã vượt giới hạn booking đang giữ.",
     ),
 }
 
@@ -62,11 +87,17 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(DomainError)
     async def handle_domain_error(request: Request, exc: DomainError) -> JSONResponse:
         status_code, code, default_message = _DOMAIN_ERRORS[type(exc)]
+        details = (
+            {"seatIds": exc.seat_ids}
+            if isinstance(exc, SeatUnavailableError) and exc.seat_ids
+            else None
+        )
         return error_response(
             request,
             status_code=status_code,
             code=code,
             message=str(exc) or default_message,
+            details=details,
         )
 
     @app.exception_handler(HTTPException)
@@ -88,5 +119,5 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=400,
             code="VALIDATION_ERROR",
             message="Dữ liệu yêu cầu không hợp lệ.",
-            details=exc.errors(),
+            details=jsonable_encoder(exc.errors()),
         )

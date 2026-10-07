@@ -65,6 +65,12 @@ class SqlAlchemyUserRepository:
         row = self._session.scalar(select(UserModel).where(UserModel.email == email))
         return _to_user(row) if row else None
 
+    def lock(self, user_id: UUID) -> User | None:
+        row = self._session.scalar(
+            select(UserModel).where(UserModel.id == user_id).with_for_update()
+        )
+        return _to_user(row) if row else None
+
     def add(self, user: User) -> None:
         self._session.add(
             UserModel(

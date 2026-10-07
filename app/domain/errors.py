@@ -32,3 +32,29 @@ class RoomNameAlreadyUsedError(DomainError):
 
 class ShowtimeOverlapError(DomainError):
     pass
+
+
+class DomainValidationError(DomainError):
+    pass
+
+
+class SeatUnavailableError(DomainError):
+    def __init__(self, seat_ids: list[str] | None = None) -> None:
+        super().__init__()
+        self.seat_ids = seat_ids or []
+
+
+class BookingExpiredError(DomainError):
+    pass
+
+
+class InvalidBookingStateError(DomainError):
+    pass
+
+
+class ShowtimeNotBookableError(DomainError):
+    pass
+
+
+class HoldLimitExceededError(DomainError):
+    pass

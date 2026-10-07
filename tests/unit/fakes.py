@@ -1,8 +1,10 @@
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any, Self
 from uuid import UUID
 
 from app.domain.auth.model import IssuedToken, Role, User
+from app.domain.booking.model import Booking, BookingStatus
 from app.domain.catalog.model import Movie
 from app.domain.cinema.model import Room, Seat
 from app.domain.errors import EmailAlreadyUsedError
@@ -21,6 +23,9 @@ class InMemoryUsers:
 
     def get_by_email(self, email: str) -> User | None:
         return next((u for u in self.rows.values() if u.email == email), None)
+
+    def lock(self, user_id: UUID) -> User | None:
+        return self.get(user_id)
 
     def add(self, user: User) -> None:
         if self.get_by_email(user.email):
@@ -121,12 +126,137 @@ class InMemoryShowtimes:
         del self.rows[showtime_id]
 
 
+class InMemoryBookings:
+    def __init__(self) -> None:
+        self.rows: dict[UUID, Booking] = {}
+        self.inventory: dict[tuple[UUID, UUID], tuple[str, UUID | None, datetime | None]] = {}
+
+    def get(self, booking_id: UUID) -> Booking | None:
+        return self.rows.get(booking_id)
+
+    def get_for_update(self, booking_id: UUID) -> Booking | None:
+        return self.get(booking_id)
+
+    def search(
+        self,
+        user_id: UUID,
+        status: str | None,
+        now: datetime,
+        page: int,
+        page_size: int,
+    ) -> Page[Booking]:
+        found = [
+            replace(booking, status=booking.effective_status(now))
+            for booking in self.rows.values()
+            if booking.user_id == user_id
+            and (status is None or booking.effective_status(now).value == status)
+        ]
+        found.sort(key=lambda booking: (booking.created_at, booking.id), reverse=True)
+        start = (page - 1) * page_size
+        return Page(found[start : start + page_size], page, page_size, len(found))
+
+    def add(self, booking: Booking) -> None:
+        self.rows[booking.id] = booking
+
+    def flush(self) -> None:
+        pass
+
+    def count_active_holds(
+        self, user_id: UUID, showtime_id: UUID, now: datetime
+    ) -> tuple[int, int]:
+        active = [
+            booking
+            for booking in self.rows.values()
+            if booking.user_id == user_id
+            and booking.status is BookingStatus.HELD
+            and booking.expires_at > now
+        ]
+        return sum(booking.showtime_id == showtime_id for booking in active), len(active)
+
+    def lock_inventory(self, showtime_id: UUID, seat_ids: list[UUID]) -> int:
+        return sum((showtime_id, seat_id) in self.inventory for seat_id in seat_ids)
+
+    def acquire_holds(
+        self,
+        showtime_id: UUID,
+        seat_ids: list[UUID],
+        booking_id: UUID,
+        expires_at: datetime,
+        now: datetime,
+    ) -> list[UUID]:
+        unavailable = []
+        for seat_id in seat_ids:
+            state, _, hold_expires_at = self.inventory[(showtime_id, seat_id)]
+            if state == "BOOKED" or (
+                state == "HELD" and hold_expires_at is not None and hold_expires_at > now
+            ):
+                unavailable.append(seat_id)
+        if unavailable:
+            return unavailable
+        for seat_id in seat_ids:
+            self.inventory[(showtime_id, seat_id)] = ("HELD", booking_id, expires_at)
+        return []
+
+    def mark_booked(self, booking_id: UUID, now: datetime) -> int:
+        count = 0
+        for key, (state, owner, expires_at) in list(self.inventory.items()):
+            if (
+                state == "HELD"
+                and owner == booking_id
+                and expires_at is not None
+                and expires_at > now
+            ):
+                self.inventory[key] = ("BOOKED", booking_id, None)
+                count += 1
+        return count
+
+    def release_holds(self, booking_id: UUID) -> int:
+        count = 0
+        for key, (state, owner, _) in list(self.inventory.items()):
+            if state == "HELD" and owner == booking_id:
+                self.inventory[key] = ("AVAILABLE", None, None)
+                count += 1
+        return count
+
+    def confirm(self, booking_id: UUID, confirmed_at: datetime, booking_code: str) -> None:
+        self.rows[booking_id] = replace(
+            self.rows[booking_id],
+            status=BookingStatus.CONFIRMED,
+            confirmed_at=confirmed_at,
+            booking_code=booking_code,
+        )
+
+    def cancel(self, booking_id: UUID, cancelled_at: datetime) -> None:
+        self.rows[booking_id] = replace(
+            self.rows[booking_id],
+            status=BookingStatus.CANCELLED,
+            cancelled_at=cancelled_at,
+        )
+
+    def seat_statuses(self, showtime_id: UUID, now: datetime) -> dict[UUID, str]:
+        return {
+            seat_id: (
+                state
+                if state == "BOOKED"
+                or (state == "HELD" and expires_at is not None and expires_at > now)
+                else "AVAILABLE"
+            )
+            for (inventory_showtime_id, seat_id), (state, _, expires_at) in self.inventory.items()
+            if inventory_showtime_id == showtime_id
+        }
+
+    def exists_for_showtime(self, showtime_id: UUID) -> bool:
+        return any(booking.showtime_id == showtime_id for booking in self.rows.values())
+
+
 class FakeUnitOfWork:
     def __init__(self) -> None:
         self.users = InMemoryUsers()
         self.movies = InMemoryMovies()
         self.rooms = InMemoryRooms()
         self.showtimes = InMemoryShowtimes()
+        self.bookings = InMemoryBookings()
+        self.clock = FixedClock()
         self.commits = 0
 
     def __call__(self) -> Self:
