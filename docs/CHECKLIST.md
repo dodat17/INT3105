@@ -165,6 +165,7 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 - [x] `N1` Sinh ghế theo số hàng và số cột.
 - [x] `N1` Gán đúng hàng VIP.
 - [x] `N1` Implement danh sách phòng.
+- [ ] `N1` Implement ADMIN cập nhật phòng và sơ đồ ghế khi phòng chưa có suất chiếu.
 - [x] `N1` Bảo đảm tạo phòng và ghế trong một transaction.
 
 ### Showtime backend
@@ -180,14 +181,15 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Frontend room và showtime
 
-- [ ] `N2` Tạo trang ADMIN danh sách phòng.
-- [ ] `N2` Tạo form tạo phòng.
-- [ ] `N2` Tạo preview sơ đồ ghế.
-- [ ] `N2` Tạo trang ADMIN quản lý suất chiếu.
-- [ ] `N2` Tạo form tạo suất chiếu.
-- [ ] `N2` Hiển thị giờ kết thúc dự kiến.
-- [ ] `N2` Hiển thị lỗi trùng lịch.
-- [ ] `N2` Hiển thị suất chiếu trên trang chi tiết phim.
+- [x] `N2` Tạo trang ADMIN danh sách phòng.
+- [x] `N2` Tạo form tạo phòng.
+- [x] `N2` Tạo preview sơ đồ ghế.
+- [ ] `N2` Tạo form chỉnh sửa phòng và sơ đồ ghế.
+- [x] `N2` Tạo trang ADMIN quản lý suất chiếu.
+- [x] `N2` Tạo form tạo suất chiếu.
+- [x] `N2` Hiển thị giờ kết thúc dự kiến.
+- [x] `N2` Hiển thị lỗi trùng lịch.
+- [x] `N2` Hiển thị suất chiếu trên trang chi tiết phim.
 
 ### Kiểm thử
 

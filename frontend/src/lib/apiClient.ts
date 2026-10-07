@@ -4,6 +4,12 @@ import type {
   MoviePage,
   MoviePayload,
   RegisterPayload,
+  Room,
+  RoomPayload,
+  SeatMap,
+  Showtime,
+  ShowtimePage,
+  ShowtimePayload,
   User,
 } from '../types';
 
@@ -76,6 +82,37 @@ export const movieApi = {
     }),
   delete: (token: string, movieId: string) =>
     apiRequest<void>(`/movies/${movieId}`, {
+      method: 'DELETE',
+      headers: authorization(token),
+    }),
+};
+
+export const roomApi = {
+  list: (token: string) => apiRequest<Room[]>('/rooms', { headers: authorization(token) }),
+  create: (token: string, payload: RoomPayload) =>
+    apiRequest<Room>('/rooms', {
+      method: 'POST',
+      headers: authorization(token),
+      body: JSON.stringify(payload),
+    }),
+};
+
+export const showtimeApi = {
+  list: (movieId = '', date = '', pageSize = 100) => {
+    const search = new URLSearchParams({ page: '1', pageSize: String(pageSize) });
+    if (movieId) search.set('movieId', movieId);
+    if (date) search.set('date', date);
+    return apiRequest<ShowtimePage>(`/showtimes?${search}`);
+  },
+  seats: (showtimeId: string) => apiRequest<SeatMap>(`/showtimes/${showtimeId}/seats`),
+  create: (token: string, payload: ShowtimePayload) =>
+    apiRequest<Showtime>('/showtimes', {
+      method: 'POST',
+      headers: authorization(token),
+      body: JSON.stringify(payload),
+    }),
+  delete: (token: string, showtimeId: string) =>
+    apiRequest<void>(`/showtimes/${showtimeId}`, {
       method: 'DELETE',
       headers: authorization(token),
     }),

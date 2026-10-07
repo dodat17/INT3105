@@ -1,74 +1,31 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 
 import type { AppContext } from '../app/AppShell';
+import { AdminMovies } from '../components/AdminMovies';
+import { AdminRooms } from '../components/AdminRooms';
+import { AdminShowtimes } from '../components/AdminShowtimes';
+
+type AdminSection = 'movies' | 'rooms' | 'showtimes';
 
 export function AdminPage() {
-  const { addMovie, deleteMovie, movies } = useOutletContext<AppContext>();
-  const [notice, setNotice] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const submitMovie = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    setNotice('');
-    setSubmitting(true);
-    try {
-      const movie = await addMovie({
-        title: String(form.get('title') ?? '').trim(),
-        genre: String(form.get('genre') ?? '').trim(),
-        durationMinutes: Number(form.get('durationMinutes')),
-        ageRating: String(form.get('ageRating') ?? '').trim(),
-        description: String(form.get('description') ?? '').trim(),
-      });
-      formElement.reset();
-      setNotice(`Đã thêm “${movie.title}”.`);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Không thể thêm phim.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const removeMovie = async (movieId: string, title: string) => {
-    if (!window.confirm(`Xóa “${title}” khỏi danh mục?`)) return;
-    try {
-      await deleteMovie(movieId);
-      setNotice(`Đã xóa “${title}”.`);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Không thể xóa phim.');
-    }
-  };
+  const context = useOutletContext<AppContext>();
+  const [section, setSection] = useState<AdminSection>('movies');
 
   return (
     <section className="admin-page">
       <div className="page-heading">
-        <div><p className="section-index">04 / QUẢN TRỊ</p><h1>Quản lý danh mục phim.</h1></div>
+        <div><p className="section-index">04 / QUẢN TRỊ</p><h1>Vận hành rạp chiếu.</h1></div>
         <span>Admin</span>
       </div>
-      <div className="admin-grid">
-        <form className="admin-form" onSubmit={submitMovie}>
-          <h2>Thêm phim</h2>
-          <label>Tên phim<input name="title" required /></label>
-          <label>Thể loại<input name="genre" placeholder="Ví dụ: Tâm lý" /></label>
-          <label>Thời lượng (phút)<input min="1" max="600" name="durationMinutes" type="number" required /></label>
-          <label>Phân loại tuổi<input maxLength={10} name="ageRating" placeholder="T13" /></label>
-          <label>Mô tả<textarea maxLength={5000} name="description" rows={4} /></label>
-          <button className="button button-accent" disabled={submitting} type="submit">{submitting ? 'Đang thêm...' : 'Thêm vào danh mục'}</button>
-          {notice && <p className="form-notice" role="status">{notice}</p>}
-        </form>
-        <div className="admin-list">
-          <div className="admin-list-heading"><h2>Danh mục phim</h2><span>{movies.totalItems} phim</span></div>
-          {movies.items.map((movie) => (
-            <div className="admin-movie-row" key={movie.id}>
-              <i />
-              <div><strong>{movie.title}</strong><span>{movie.genre || 'Chưa phân loại'} · {movie.durationMinutes} phút</span></div>
-              <button className="text-button danger" type="button" onClick={() => void removeMovie(movie.id, movie.title)}>Xóa</button>
-            </div>
-          ))}
-        </div>
+      <div className="admin-tabs" role="tablist" aria-label="Khu vực quản trị">
+        <button className={section === 'movies' ? 'active' : ''} type="button" onClick={() => setSection('movies')}>Phim</button>
+        <button className={section === 'rooms' ? 'active' : ''} type="button" onClick={() => setSection('rooms')}>Phòng chiếu</button>
+        <button className={section === 'showtimes' ? 'active' : ''} type="button" onClick={() => setSection('showtimes')}>Suất chiếu</button>
       </div>
+      {section === 'movies' && <AdminMovies addMovie={context.addMovie} deleteMovie={context.deleteMovie} movies={context.movies} />}
+      {section === 'rooms' && <AdminRooms authenticated={context.authenticated} />}
+      {section === 'showtimes' && <AdminShowtimes authenticated={context.authenticated} movies={context.movies} />}
     </section>
   );
 }

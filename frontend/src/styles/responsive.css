@@ -21,10 +21,15 @@
   .ticket-main { padding: 1.25rem; }
   .ticket-card > button { margin: 0 1.25rem 1.25rem; justify-self: start; }
   .site-footer { align-items: start; flex-direction: column; }
+  .schedule-heading { align-items: start; flex-direction: column; }
+  .showtime-admin-row { grid-template-columns: 1fr auto; }
+  .showtime-admin-row time { grid-column: 1 / -1; }
 }
 
 @media (max-width: 520px) {
   .movie-grid { grid-template-columns: 1fr; }
   .seat-legend { align-items: start; flex-direction: column; }
   .search-control { grid-template-columns: 1fr; }
+  .admin-tabs { overflow-x: auto; }
+  .form-columns { grid-template-columns: 1fr; }
 }

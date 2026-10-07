@@ -39,3 +39,57 @@ export type MoviePayload = {
   ageRating: string;
 };
 
+export type Room = {
+  id: string;
+  name: string;
+  rows: number;
+  cols: number;
+  seatCount: number;
+};
+
+export type RoomPayload = {
+  name: string;
+  rows: number;
+  cols: number;
+  vipRows: number[];
+};
+
+export type Showtime = {
+  id: string;
+  movieId: string;
+  roomId: string;
+  startsAt: string;
+  endsAt: string;
+  basePrice: number;
+};
+
+export type ShowtimePage = {
+  items: Showtime[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+};
+
+export type ShowtimePayload = {
+  movieId: string;
+  roomId: string;
+  startsAt: string;
+  basePrice: number;
+};
+
+export type Seat = {
+  id: string;
+  rowLabel: string;
+  number: number;
+  label: string;
+  seatType: 'STANDARD' | 'VIP';
+  price: number;
+  status: 'AVAILABLE' | 'BOOKED';
+};
+
+export type SeatMap = {
+  showtimeId: string;
+  room: Pick<Room, 'id' | 'name'>;
+  seats: Seat[];
+};
+

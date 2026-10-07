@@ -33,6 +33,7 @@
 
 .search-field input,
 .admin-form input,
+.admin-form select,
 .admin-form textarea {
   width: 100%;
   padding: 0.8rem 0.9rem;
@@ -41,6 +42,8 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-small);
 }
+
+.admin-form select { appearance: none; }
 
 .admin-form textarea { resize: vertical; }
 

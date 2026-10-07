@@ -19,6 +19,7 @@ export type AppContext = {
   loadMovies: (query?: string, page?: number, pageSize?: number) => Promise<void>;
   addMovie: (payload: MoviePayload) => Promise<Movie>;
   deleteMovie: (movieId: string) => Promise<void>;
+  authenticated: <T>(request: (accessToken: string) => Promise<T>) => Promise<T>;
 };
 
 export function AppShell() {
@@ -67,7 +68,7 @@ export function AppShell() {
       .finally(() => setAuthReady(true));
   }, [loadMovies, logout, token]);
 
-  const authenticated = async <T,>(request: (accessToken: string) => Promise<T>): Promise<T> => {
+  const authenticated = useCallback(async <T,>(request: (accessToken: string) => Promise<T>): Promise<T> => {
     if (!token) throw new ApiError(401, 'Vui lòng đăng nhập.');
     try {
       return await request(token);
@@ -75,7 +76,7 @@ export function AppShell() {
       if (error instanceof ApiError && error.status === 401) logout();
       throw error;
     }
-  };
+  }, [logout, token]);
 
   const context: AppContext = {
     authReady,
@@ -106,6 +107,7 @@ export function AppShell() {
       await authenticated((accessToken) => movieApi.delete(accessToken, movieId));
       await loadMovies('', 1, 100);
     },
+    authenticated,
   };
 
   return (
