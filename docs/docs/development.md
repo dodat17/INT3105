@@ -10,7 +10,7 @@
 ```bash
 uv sync
 uv run alembic upgrade head      # tạo/cập nhật schema theo DATABASE_URL
-uv run python scripts/seed.py    # tài khoản ADMIN + phim mẫu; chạy lại không tạo trùng
+uv run python scripts/seed.py    # ADMIN, phim, phòng, suất chiếu mẫu; chạy lại không tạo trùng
 uv run uvicorn app.main:app --reload --port 8080
 ```
 

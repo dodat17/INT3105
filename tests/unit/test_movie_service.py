@@ -1,3 +1,4 @@
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
@@ -5,7 +6,8 @@ import pytest
 from app.domain.auth.model import Actor, Role
 from app.domain.catalog.service import MovieService
 from app.domain.errors import BusinessRuleViolation, ForbiddenError, NotFoundError
-from tests.unit.fakes import FakeUnitOfWork
+from app.domain.scheduling.model import Showtime
+from tests.unit.fakes import NOW, FakeUnitOfWork
 
 ADMIN = Actor(uuid4(), Role.ADMIN)
 CUSTOMER = Actor(uuid4(), Role.CUSTOMER)
@@ -60,6 +62,15 @@ def test_admin_deletes_movie(service: MovieService) -> None:
         service.get_movie(movie.id)
     with pytest.raises(NotFoundError):
         service.delete_movie(ADMIN, movie.id)
+
+
+def test_movie_with_showtimes_cannot_be_deleted(service: MovieService, uow: FakeUnitOfWork) -> None:
+    movie = service.create_movie(ADMIN, **MOVIE)
+    uow.showtimes.add(Showtime(uuid4(), movie.id, uuid4(), NOW, NOW + timedelta(hours=2), 90_000))
+
+    with pytest.raises(BusinessRuleViolation):
+        service.delete_movie(ADMIN, movie.id)
+    assert service.get_movie(movie.id) == movie
 
 
 def test_blank_search_means_no_filter(service: MovieService, uow: FakeUnitOfWork) -> None:

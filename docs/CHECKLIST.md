@@ -150,33 +150,33 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Domain và database
 
-- [ ] `N1` Tạo Room và Seat entities.
-- [ ] `N1` Tạo Showtime entity.
-- [ ] `N1` Tạo SeatType enum.
-- [ ] `N1` Tạo repository ports tương ứng.
-- [ ] `N1` Tạo ORM models cho rooms, seats và showtimes.
-- [ ] `N1` Tạo migration và index.
-- [ ] `N1` Tạo ràng buộc chống trùng ghế trong một phòng.
-- [ ] `N1` Tạo cơ chế chống trùng lịch chiếu ở production.
+- [x] `N1` Tạo Room và Seat entities.
+- [x] `N1` Tạo Showtime entity.
+- [x] `N1` Tạo SeatType enum.
+- [x] `N1` Tạo repository ports tương ứng.
+- [x] `N1` Tạo ORM models cho rooms, seats và showtimes.
+- [x] `N1` Tạo migration và index.
+- [x] `N1` Tạo ràng buộc chống trùng ghế trong một phòng.
+- [x] `N1` Tạo cơ chế chống trùng lịch chiếu ở production.
 
 ### Room backend
 
-- [ ] `N1` Implement ADMIN tạo phòng.
-- [ ] `N1` Sinh ghế theo số hàng và số cột.
-- [ ] `N1` Gán đúng hàng VIP.
-- [ ] `N1` Implement danh sách phòng.
-- [ ] `N1` Bảo đảm tạo phòng và ghế trong một transaction.
+- [x] `N1` Implement ADMIN tạo phòng.
+- [x] `N1` Sinh ghế theo số hàng và số cột.
+- [x] `N1` Gán đúng hàng VIP.
+- [x] `N1` Implement danh sách phòng.
+- [x] `N1` Bảo đảm tạo phòng và ghế trong một transaction.
 
 ### Showtime backend
 
-- [ ] `N1` Implement danh sách suất chiếu.
-- [ ] `N1` Implement lọc theo phim và ngày.
-- [ ] `N1` Implement ADMIN tạo suất chiếu.
-- [ ] `N1` Tự tính `endsAt` từ thời lượng phim.
-- [ ] `N1` Implement kiểm tra trùng lịch BR-04.
-- [ ] `N1` Implement ADMIN xóa suất chiếu.
-- [ ] `N1` Implement API sơ đồ ghế.
-- [ ] `N1` Tính đúng giá STANDARD và VIP.
+- [x] `N1` Implement danh sách suất chiếu.
+- [x] `N1` Implement lọc theo phim và ngày.
+- [x] `N1` Implement ADMIN tạo suất chiếu.
+- [x] `N1` Tự tính `endsAt` từ thời lượng phim.
+- [x] `N1` Implement kiểm tra trùng lịch BR-04.
+- [x] `N1` Implement ADMIN xóa suất chiếu.
+- [x] `N1` Implement API sơ đồ ghế. — trạng thái BOOKED có khi làm booking ở Mốc D.
+- [x] `N1` Tính đúng giá STANDARD và VIP.
 
 ### Frontend room và showtime
 
@@ -191,14 +191,14 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Kiểm thử
 
-- [ ] `N1` Unit test sinh nhãn ghế.
-- [ ] `N1` Unit test hàng VIP.
-- [ ] `N1` Unit test showtime overlap.
-- [ ] `N1` Test hai suất liền nhau không bị coi là trùng.
-- [ ] `N1` API test quyền ADMIN.
+- [x] `N1` Unit test sinh nhãn ghế.
+- [x] `N1` Unit test hàng VIP.
+- [x] `N1` Unit test showtime overlap.
+- [x] `N1` Test hai suất liền nhau không bị coi là trùng.
+- [x] `N1` API test quyền ADMIN.
 - [ ] `N2` Test form phòng và suất chiếu.
 - [ ] `N3` E2E ADMIN tạo phòng và suất chiếu.
-- [ ] `N3` Test đồng thời khi tạo lịch chiếu cùng phòng.
+- [x] `N3` Test đồng thời khi tạo lịch chiếu cùng phòng.
 
 **Nghiệm thu Mốc C**
 

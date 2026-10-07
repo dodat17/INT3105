@@ -24,3 +24,11 @@ class InvalidCredentialsError(DomainError):
 
 class InvalidTokenError(DomainError):
     pass
+
+
+class RoomNameAlreadyUsedError(DomainError):
+    pass
+
+
+class ShowtimeOverlapError(DomainError):
+    pass

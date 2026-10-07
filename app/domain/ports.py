@@ -7,6 +7,8 @@ from uuid import UUID
 
 from app.domain.auth.model import Actor, IssuedToken, Role, User
 from app.domain.catalog.model import Movie
+from app.domain.cinema.model import Room, Seat
+from app.domain.scheduling.model import Showtime
 
 
 @dataclass(frozen=True)
@@ -32,11 +34,52 @@ class MovieRepository(Protocol):
     def delete(self, movie_id: UUID) -> None: ...
 
 
+class RoomRepository(Protocol):
+    def get(self, room_id: UUID) -> Room | None: ...
+    def get_by_name(self, name: str) -> Room | None: ...
+    def list_all(self) -> list[Room]: ...
+
+    def lock(self, room_id: UUID) -> Room | None:
+        """Get the room and hold a row lock until the transaction ends (BR-04)."""
+
+    def add(self, room: Room, seats: list[Seat]) -> None:
+        """Raise RoomNameAlreadyUsedError when the name is taken."""
+
+    def seats(self, room_id: UUID) -> list[Seat]:
+        """Seats ordered by row label, then number."""
+
+
+class ShowtimeRepository(Protocol):
+    def get(self, showtime_id: UUID) -> Showtime | None: ...
+
+    def search(
+        self,
+        movie_id: UUID | None,
+        starts_from: datetime | None,
+        starts_before: datetime | None,
+        page: int,
+        page_size: int,
+    ) -> Page[Showtime]:
+        """Ordered by starts_at, then id."""
+
+    def find_overlapping(
+        self, room_id: UUID, starts_at: datetime, ends_at: datetime
+    ) -> list[Showtime]: ...
+
+    def exists_for_movie(self, movie_id: UUID) -> bool: ...
+    def add(self, showtime: Showtime) -> None: ...
+    def delete(self, showtime_id: UUID) -> None: ...
+
+
 class UnitOfWork(Protocol):
     @property
     def users(self) -> UserRepository: ...
     @property
     def movies(self) -> MovieRepository: ...
+    @property
+    def rooms(self) -> RoomRepository: ...
+    @property
+    def showtimes(self) -> ShowtimeRepository: ...
 
     def __enter__(self) -> Self: ...
 

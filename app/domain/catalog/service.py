@@ -49,10 +49,12 @@ class MovieService:
 
     def delete_movie(self, actor: Actor, movie_id: UUID) -> None:
         require_admin(actor)
-        # BR-12 (no delete once CONFIRMED tickets exist) needs showtimes/bookings,
-        # which arrive in milestones C/D; the check goes here then.
         with self._uow_factory() as uow:
             if uow.movies.get(movie_id) is None:
                 raise NotFoundError
+            # Stricter than BR-12 until bookings exist: a scheduled movie is never deleted,
+            # so no showtime is left pointing at a missing movie.
+            if uow.showtimes.exists_for_movie(movie_id):
+                raise BusinessRuleViolation("Không thể xóa phim đang có suất chiếu.")
             uow.movies.delete(movie_id)
             uow.commit()
