@@ -1,0 +1,27 @@
+[importlinter]
+root_package = cinema_booking
+include_external_packages = True
+
+[importlinter:contract:domain-is-independent]
+name = Domain is independent
+type = forbidden
+source_modules =
+    cinema_booking.domain
+forbidden_modules =
+    cinema_booking.api
+    cinema_booking.infrastructure
+    fastapi
+    starlette
+    pydantic
+    sqlalchemy
+    psycopg
+    jwt
+    bcrypt
+
+[importlinter:contract:infrastructure-does-not-import-api]
+name = Infrastructure does not import API
+type = forbidden
+source_modules =
+    cinema_booking.infrastructure
+forbidden_modules =
+    cinema_booking.api

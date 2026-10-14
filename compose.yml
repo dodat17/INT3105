@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cinema
+      POSTGRES_USER: cinema
+      POSTGRES_PASSWORD: cinema
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cinema -d cinema"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://cinema:cinema@db:5432/cinema
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-60}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      WEB_WORKERS: ${WEB_WORKERS:-2}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:
