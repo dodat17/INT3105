@@ -17,7 +17,7 @@ class BusinessRuleViolation(DomainError):
     pass
 
 
-class BookingValidationError(DomainError):
+class BookingValidationError(BusinessRuleViolation):
     def __init__(self, message: str, *fields: str) -> None:
         super().__init__(message)
         self.fields = fields
