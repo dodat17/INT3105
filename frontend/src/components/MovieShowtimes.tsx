@@ -65,7 +65,7 @@ export function MovieShowtimes({ movieId }: MovieShowtimesProps) {
       {date && <button className="text-button" type="button" onClick={() => changeDate('')}>Xem tất cả ngày</button>}
       {loading ? <LoadingState /> : error && !selectedId ? <ErrorState message={error} /> : showtimes.length ? (
         <div className="showtime-cards">{showtimes.map((showtime) => (
-          <button className={`showtime-card ${selectedId === showtime.id ? 'active' : ''}`} key={showtime.id} type="button" onClick={() => void viewSeats(showtime.id)}>
+          <button className={`showtime-card ${selectedId === showtime.id ? 'active' : ''}`} disabled={!showtime.isOpenForBooking} key={showtime.id} type="button" onClick={() => void viewSeats(showtime.id)}>
             <strong>{dateTime.format(new Date(showtime.startsAt))}</strong><span>Đến {time.format(new Date(showtime.endsAt))}</span><small>Từ {currency.format(showtime.basePrice)}</small>
           </button>
         ))}</div>
@@ -76,7 +76,7 @@ export function MovieShowtimes({ movieId }: MovieShowtimesProps) {
           {user?.role === 'CUSTOMER' ? <BookingSummary seats={selected} submitting={submitting} onSubmit={() => void createBooking()} /> : <p><Link to="/login">Đăng nhập tài khoản khách hàng</Link> để giữ ghế.</p>}
         </>}
         {error && <ErrorState message={error} />}
-        {booking && <div className="booking-success" role="status"><strong>Đã giữ {booking.items.map((item) => item.label).join(', ')}</strong><span>Hết hạn lúc {time.format(new Date(booking.expiresAt))}</span><Link to={`/tickets/${booking.id}`}>Xem booking</Link></div>}
+        {booking && <div className="booking-success" role="status"><strong>Đã giữ {booking.items.map((item) => item.label).join(', ')}</strong><span>Tổng chính thức: {currency.format(booking.totalAmount)}</span><span>Hết hạn lúc {time.format(new Date(booking.expiresAt))}</span><Link to={`/tickets/${booking.id}`}>Xem booking</Link></div>}
       </div>}
     </div>
   );

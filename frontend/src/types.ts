@@ -61,6 +61,7 @@ export type Showtime = {
   startsAt: string;
   endsAt: string;
   basePrice: number;
+  isOpenForBooking: boolean;
 };
 
 export type ShowtimePage = {
