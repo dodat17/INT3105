@@ -7,6 +7,7 @@ import { AuthPage } from './pages/AuthPage';
 import { HomePage } from './pages/HomePage';
 import { MovieDetailPage } from './pages/MovieDetailPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { TicketDetailPage } from './pages/TicketDetailPage';
 import { TicketsPage } from './pages/TicketsPage';
 
 export const router = createBrowserRouter([
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
       { path: 'login', element: <AuthPage mode="login" /> },
       { path: 'register', element: <AuthPage mode="register" /> },
       { path: 'tickets', element: <RequireRole role="CUSTOMER"><TicketsPage /></RequireRole> },
+      { path: 'tickets/:bookingId', element: <RequireRole role="CUSTOMER"><TicketDetailPage /></RequireRole> },
       { path: 'admin', element: <RequireRole role="ADMIN"><AdminPage /></RequireRole> },
       { path: '*', element: <NotFoundPage /> },
     ],
