@@ -32,3 +32,23 @@ class RoomNameAlreadyUsedError(DomainError):
 
 class ShowtimeOverlapError(DomainError):
     pass
+
+
+class SeatUnavailableError(DomainError):
+    pass
+
+
+class BookingExpiredError(DomainError):
+    pass
+
+
+class InvalidBookingStateError(DomainError):
+    pass
+
+
+class ShowtimeNotBookableError(DomainError):
+    pass
+
+
+class HoldLimitExceededError(DomainError):
+    pass

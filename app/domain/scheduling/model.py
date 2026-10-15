@@ -21,6 +21,7 @@ class Showtime:
 
 class SeatStatus(StrEnum):
     AVAILABLE = "AVAILABLE"
+    HELD = "HELD"
     BOOKED = "BOOKED"
 
 
