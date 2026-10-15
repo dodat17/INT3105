@@ -89,9 +89,7 @@ def test_owner_lists_views_and_cancels_booking(
     assert listed.status_code == 200
     assert [item["id"] for item in listed.json()["items"]] == [created["id"]]
 
-    detail = client.get(
-        f"/api/v1/bookings/{created['id']}", headers=auth_header(customer_token)
-    )
+    detail = client.get(f"/api/v1/bookings/{created['id']}", headers=auth_header(customer_token))
     assert detail.status_code == 200
     assert detail.json()["items"][0]["seatId"] == seats[0]
 
@@ -107,7 +105,9 @@ def test_owner_lists_views_and_cancels_booking(
     )
 
     seat_map = client.get(f"/api/v1/showtimes/{showtime_id}/seats").json()
-    assert next(seat for seat in seat_map["seats"] if seat["id"] == seats[0])["status"] == "AVAILABLE"
+    assert (
+        next(seat for seat in seat_map["seats"] if seat["id"] == seats[0])["status"] == "AVAILABLE"
+    )
 
 
 def test_booking_validation_and_owner_hiding(
@@ -131,14 +131,21 @@ def test_booking_validation_and_owner_hiding(
         json={"email": "other@example.test", "password": "secret123", "fullName": "Other"},
     )
     from tests.api.conftest import login
+
     other_token = login(client, "other@example.test")
 
-    assert client.get(
-        f"/api/v1/bookings/{booking['id']}", headers=auth_header(other_token)
-    ).status_code == 404
-    assert client.delete(
-        f"/api/v1/bookings/{booking['id']}", headers=auth_header(other_token)
-    ).status_code == 404
+    assert (
+        client.get(
+            f"/api/v1/bookings/{booking['id']}", headers=auth_header(other_token)
+        ).status_code
+        == 404
+    )
+    assert (
+        client.delete(
+            f"/api/v1/bookings/{booking['id']}", headers=auth_header(other_token)
+        ).status_code
+        == 404
+    )
 
 
 def test_confirmed_booking_cannot_be_cancelled(
@@ -146,7 +153,8 @@ def test_confirmed_booking_cannot_be_cancelled(
 ) -> None:
     showtime_id, seats = _showtime_and_seats(client, admin_token, setup)
     booking = client.post(
-        "/api/v1/bookings", json={"showtimeId": showtime_id, "seatIds": [seats[0]]},
+        "/api/v1/bookings",
+        json={"showtimeId": showtime_id, "seatIds": [seats[0]]},
         headers=auth_header(customer_token),
     ).json()
     client.post(f"/api/v1/bookings/{booking['id']}/confirm", headers=auth_header(customer_token))

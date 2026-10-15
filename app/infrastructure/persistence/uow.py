@@ -9,8 +9,8 @@ from app.infrastructure.persistence.repositories import (
     SqlAlchemyBookingRepository,
     SqlAlchemyMovieRepository,
     SqlAlchemyRoomRepository,
-    SqlAlchemyShowtimeRepository,
     SqlAlchemySeatInventoryRepository,
+    SqlAlchemyShowtimeRepository,
     SqlAlchemyUserRepository,
 )
 
@@ -22,6 +22,14 @@ def create_session_factory(database_url: str, pool_size: int) -> sessionmaker[Se
 
 class SqlAlchemyUnitOfWork:
     """One Session and one transaction per use case."""
+
+    users: SqlAlchemyUserRepository
+    movies: SqlAlchemyMovieRepository
+    rooms: SqlAlchemyRoomRepository
+    showtimes: SqlAlchemyShowtimeRepository
+    bookings: SqlAlchemyBookingRepository
+    inventory: SqlAlchemySeatInventoryRepository
+    clock: DatabaseClock
 
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory

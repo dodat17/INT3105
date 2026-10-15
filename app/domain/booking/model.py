@@ -54,8 +54,14 @@ class Booking:
     cancelled_at: datetime | None = None
     booking_code: str | None = None
 
-    def with_status(self, status: BookingStatus, **changes: object) -> "Booking":
-        return replace(self, status=status, **changes)
+    def with_status(self, status: BookingStatus) -> "Booking":
+        return replace(self, status=status)
+
+    def confirm(self, at: datetime, code: str) -> "Booking":
+        return replace(self, status=BookingStatus.CONFIRMED, confirmed_at=at, booking_code=code)
+
+    def cancel(self, at: datetime) -> "Booking":
+        return replace(self, status=BookingStatus.CANCELLED, cancelled_at=at)
 
 
 def validate_seat_ids(seat_ids: list[UUID]) -> list[UUID]:
@@ -66,9 +72,7 @@ def validate_seat_ids(seat_ids: list[UUID]) -> list[UUID]:
     return seat_ids
 
 
-def effective_status(
-    status: BookingStatus, expires_at: datetime, now: datetime
-) -> BookingStatus:
+def effective_status(status: BookingStatus, expires_at: datetime, now: datetime) -> BookingStatus:
     if status is BookingStatus.HELD and now >= expires_at:
         return BookingStatus.EXPIRED
     return status

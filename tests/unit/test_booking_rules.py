@@ -34,10 +34,8 @@ def test_terminal_booking_status_is_not_changed_by_time() -> None:
     expired_long_ago = NOW - timedelta(days=1)
 
     assert (
-        effective_status(BookingStatus.CONFIRMED, expired_long_ago, NOW)
-        is BookingStatus.CONFIRMED
+        effective_status(BookingStatus.CONFIRMED, expired_long_ago, NOW) is BookingStatus.CONFIRMED
     )
     assert (
-        effective_status(BookingStatus.CANCELLED, expired_long_ago, NOW)
-        is BookingStatus.CANCELLED
+        effective_status(BookingStatus.CANCELLED, expired_long_ago, NOW) is BookingStatus.CANCELLED
     )

@@ -26,7 +26,9 @@ def upgrade() -> None:
         sa.Column("cancelled_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("total_amount", sa.BigInteger(), nullable=False),
         sa.Column("booking_code", sa.String(16), nullable=True),
-        sa.CheckConstraint("status IN ('HELD', 'CONFIRMED', 'CANCELLED')", name="ck_bookings_status"),
+        sa.CheckConstraint(
+            "status IN ('HELD', 'CONFIRMED', 'CANCELLED')", name="ck_bookings_status"
+        ),
         sa.CheckConstraint("total_amount >= 0", name="ck_bookings_total_non_negative"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["showtime_id"], ["showtimes.id"], ondelete="RESTRICT"),
@@ -60,15 +62,19 @@ def upgrade() -> None:
         sa.Column("state", sa.String(12), nullable=False, server_default="AVAILABLE"),
         sa.Column("booking_id", sa.Uuid(), nullable=True),
         sa.Column("hold_expires_at", sa.DateTime(timezone=True), nullable=True),
-        sa.CheckConstraint("state IN ('AVAILABLE', 'HELD', 'BOOKED')", name="ck_showtime_seats_state"),
+        sa.CheckConstraint(
+            "state IN ('AVAILABLE', 'HELD', 'BOOKED')", name="ck_showtime_seats_state"
+        ),
         sa.ForeignKeyConstraint(["showtime_id"], ["showtimes.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["seat_id"], ["seats.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["booking_id"], ["bookings.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("showtime_id", "seat_id"),
     )
     op.create_index("ix_showtime_seats_booking_id", "showtime_seats", ["booking_id"])
-    op.execute(sa.text("""INSERT INTO showtime_seats (showtime_id, seat_id, state)
-        SELECT st.id, s.id, 'AVAILABLE' FROM showtimes st JOIN seats s ON s.room_id = st.room_id"""))
+    op.execute(
+        sa.text("""INSERT INTO showtime_seats (showtime_id, seat_id, state)
+        SELECT st.id, s.id, 'AVAILABLE' FROM showtimes st JOIN seats s ON s.room_id = st.room_id""")
+    )
 
 
 def downgrade() -> None:

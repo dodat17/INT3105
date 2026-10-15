@@ -42,16 +42,31 @@ class BookingResponse(CamelModel):
     @classmethod
     def from_domain(cls, booking: Booking) -> "BookingResponse":
         return cls(
-            id=booking.id, showtime_id=booking.showtime_id, status=booking.status,
-            created_at=booking.created_at, expires_at=booking.expires_at,
-            confirmed_at=booking.confirmed_at, cancelled_at=booking.cancelled_at,
-            total_amount=booking.total_amount, booking_code=booking.booking_code,
-            items=[BookingItemResponse(seat_id=item.seat_id, label=f"{item.row_label}{item.number}", seat_type=item.seat_type, unit_price=item.unit_price) for item in booking.items],
+            id=booking.id,
+            showtime_id=booking.showtime_id,
+            status=booking.status,
+            created_at=booking.created_at,
+            expires_at=booking.expires_at,
+            confirmed_at=booking.confirmed_at,
+            cancelled_at=booking.cancelled_at,
+            total_amount=booking.total_amount,
+            booking_code=booking.booking_code,
+            items=[
+                BookingItemResponse(
+                    seat_id=item.seat_id,
+                    label=f"{item.row_label}{item.number}",
+                    seat_type=item.seat_type,
+                    unit_price=item.unit_price,
+                )
+                for item in booking.items
+            ],
         )
 
 
 @router.post("/bookings", status_code=201, summary="Giữ ghế")
-def create_booking(payload: CreateBookingRequest, actor: ActorDep, service: BookingServiceDep, response: Response) -> BookingResponse:
+def create_booking(
+    payload: CreateBookingRequest, actor: ActorDep, service: BookingServiceDep, response: Response
+) -> BookingResponse:
     booking = service.create(actor, payload.showtime_id, payload.seat_ids)
     response.headers["Location"] = f"/api/v1/bookings/{booking.id}"
     return BookingResponse.from_domain(booking)
@@ -59,13 +74,19 @@ def create_booking(payload: CreateBookingRequest, actor: ActorDep, service: Book
 
 @router.get("/me/bookings", summary="Booking của tôi")
 def list_bookings(
-    actor: ActorDep, service: BookingServiceDep,
+    actor: ActorDep,
+    service: BookingServiceDep,
     status: Annotated[BookingStatus | None, Query()] = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
 ) -> PageResponse[BookingResponse]:
     result = service.list(actor, status, page, page_size)
-    return PageResponse[BookingResponse](items=[BookingResponse.from_domain(item) for item in result.items], page=result.page, page_size=result.page_size, total_items=result.total_items)
+    return PageResponse[BookingResponse](
+        items=[BookingResponse.from_domain(item) for item in result.items],
+        page=result.page,
+        page_size=result.page_size,
+        total_items=result.total_items,
+    )
 
 
 @router.get("/bookings/{booking_id}", summary="Chi tiết booking")
@@ -74,7 +95,9 @@ def get_booking(booking_id: UUID, actor: ActorDep, service: BookingServiceDep) -
 
 
 @router.post("/bookings/{booking_id}/confirm", summary="Xác nhận booking")
-def confirm_booking(booking_id: UUID, actor: ActorDep, service: BookingServiceDep) -> BookingResponse:
+def confirm_booking(
+    booking_id: UUID, actor: ActorDep, service: BookingServiceDep
+) -> BookingResponse:
     return BookingResponse.from_domain(service.confirm(actor, booking_id))
 
 

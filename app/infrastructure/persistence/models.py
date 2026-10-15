@@ -107,7 +107,9 @@ class BookingModel(Base):
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), index=True)
-    showtime_id: Mapped[UUID] = mapped_column(ForeignKey("showtimes.id", ondelete="RESTRICT"), index=True)
+    showtime_id: Mapped[UUID] = mapped_column(
+        ForeignKey("showtimes.id", ondelete="RESTRICT"), index=True
+    )
     status: Mapped[str] = mapped_column(String(16), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
@@ -125,7 +127,9 @@ class BookingItemModel(Base):
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
-    booking_id: Mapped[UUID] = mapped_column(ForeignKey("bookings.id", ondelete="RESTRICT"), index=True)
+    booking_id: Mapped[UUID] = mapped_column(
+        ForeignKey("bookings.id", ondelete="RESTRICT"), index=True
+    )
     seat_id: Mapped[UUID] = mapped_column(ForeignKey("seats.id", ondelete="RESTRICT"))
     row_label: Mapped[str] = mapped_column(String(2))
     number: Mapped[int] = mapped_column(Integer)
@@ -135,12 +139,16 @@ class BookingItemModel(Base):
 
 class ShowtimeSeatModel(Base):
     __tablename__ = "showtime_seats"
-    __table_args__ = (
-        CheckConstraint("state IN ('AVAILABLE', 'HELD', 'BOOKED')", name="state"),
-    )
+    __table_args__ = (CheckConstraint("state IN ('AVAILABLE', 'HELD', 'BOOKED')", name="state"),)
 
-    showtime_id: Mapped[UUID] = mapped_column(ForeignKey("showtimes.id", ondelete="CASCADE"), primary_key=True)
-    seat_id: Mapped[UUID] = mapped_column(ForeignKey("seats.id", ondelete="RESTRICT"), primary_key=True)
+    showtime_id: Mapped[UUID] = mapped_column(
+        ForeignKey("showtimes.id", ondelete="CASCADE"), primary_key=True
+    )
+    seat_id: Mapped[UUID] = mapped_column(
+        ForeignKey("seats.id", ondelete="RESTRICT"), primary_key=True
+    )
     state: Mapped[str] = mapped_column(String(12), default="AVAILABLE")
-    booking_id: Mapped[UUID | None] = mapped_column(ForeignKey("bookings.id", ondelete="RESTRICT"), nullable=True, index=True)
+    booking_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("bookings.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     hold_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

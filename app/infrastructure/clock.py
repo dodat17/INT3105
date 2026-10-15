@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import cast
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -15,5 +16,5 @@ class DatabaseClock:
 
     def now(self) -> datetime:
         if self._session.bind is not None and self._session.bind.dialect.name == "postgresql":
-            return self._session.scalar(text("SELECT clock_timestamp()"))
+            return cast(datetime, self._session.scalar(text("SELECT clock_timestamp()")))
         return datetime.now(UTC)

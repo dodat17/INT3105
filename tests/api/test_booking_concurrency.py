@@ -17,11 +17,16 @@ REQUESTS = 20
 
 
 def test_twenty_concurrent_requests_for_one_seat_have_one_winner(
-    client: TestClient, settings: Settings, setup: dict[str, str], admin_token: str, customer_token: str
+    client: TestClient,
+    settings: Settings,
+    setup: dict[str, str],
+    admin_token: str,
+    customer_token: str,
 ) -> None:
     if not settings.database_url.startswith("postgresql"):
         pytest.skip("needs PostgreSQL row locks; set TEST_DATABASE_URL")
     from datetime import UTC, datetime, timedelta
+
     showtime = create_showtime(
         client, admin_token, setup, (datetime.now(UTC) + timedelta(days=1)).isoformat()
     ).json()

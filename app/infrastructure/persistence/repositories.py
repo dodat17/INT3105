@@ -2,11 +2,19 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import and_, delete, exists, func, or_, select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domain.auth.model import Role, User
-from app.domain.booking.model import Booking, BookingItem, BookingStatus, InventorySeat, InventoryState, effective_status
+from app.domain.booking.model import (
+    Booking,
+    BookingItem,
+    BookingStatus,
+    InventorySeat,
+    InventoryState,
+    effective_status,
+)
 from app.domain.catalog.model import Movie
 from app.domain.cinema.model import Room, Seat, SeatType
 from app.domain.errors import EmailAlreadyUsedError, RoomNameAlreadyUsedError
@@ -273,11 +281,22 @@ class SqlAlchemyShowtimeRepository:
 
 def _to_booking(row: BookingModel, items: list[BookingItemModel]) -> Booking:
     return Booking(
-        id=row.id, user_id=row.user_id, showtime_id=row.showtime_id, status=BookingStatus(row.status),
-        created_at=_utc(row.created_at), expires_at=_utc(row.expires_at), total_amount=row.total_amount,
-        items=[BookingItem(item.seat_id, item.row_label, item.number, SeatType(item.seat_type), item.unit_price) for item in items],
+        id=row.id,
+        user_id=row.user_id,
+        showtime_id=row.showtime_id,
+        status=BookingStatus(row.status),
+        created_at=_utc(row.created_at),
+        expires_at=_utc(row.expires_at),
+        total_amount=row.total_amount,
+        items=[
+            BookingItem(
+                item.seat_id, item.row_label, item.number, SeatType(item.seat_type), item.unit_price
+            )
+            for item in items
+        ],
         confirmed_at=_utc(row.confirmed_at) if row.confirmed_at else None,
-        cancelled_at=_utc(row.cancelled_at) if row.cancelled_at else None, booking_code=row.booking_code,
+        cancelled_at=_utc(row.cancelled_at) if row.cancelled_at else None,
+        booking_code=row.booking_code,
     )
 
 
@@ -286,7 +305,13 @@ class SqlAlchemyBookingRepository:
         self._session = session
 
     def _items(self, booking_id: UUID) -> list[BookingItemModel]:
-        return list(self._session.scalars(select(BookingItemModel).where(BookingItemModel.booking_id == booking_id).order_by(BookingItemModel.row_label, BookingItemModel.number)))
+        return list(
+            self._session.scalars(
+                select(BookingItemModel)
+                .where(BookingItemModel.booking_id == booking_id)
+                .order_by(BookingItemModel.row_label, BookingItemModel.number)
+            )
+        )
 
     def get(self, booking_id: UUID, *, lock: bool = False) -> Booking | None:
         stmt = select(BookingModel).where(BookingModel.id == booking_id)
@@ -295,29 +320,85 @@ class SqlAlchemyBookingRepository:
         row = self._session.scalar(stmt)
         return _to_booking(row, self._items(row.id)) if row else None
 
-    def list_for_user(self, user_id: UUID, status: BookingStatus | None, now: datetime, page: int, page_size: int) -> Page[Booking]:
-        rows = list(self._session.scalars(select(BookingModel).where(BookingModel.user_id == user_id).order_by(BookingModel.created_at.desc(), BookingModel.id)))
+    def list_for_user(
+        self, user_id: UUID, status: BookingStatus | None, now: datetime, page: int, page_size: int
+    ) -> Page[Booking]:
+        rows = list(
+            self._session.scalars(
+                select(BookingModel)
+                .where(BookingModel.user_id == user_id)
+                .order_by(BookingModel.created_at.desc(), BookingModel.id)
+            )
+        )
         bookings = [_to_booking(row, self._items(row.id)) for row in rows]
-        effective = [b if effective_status(b.status, b.expires_at, now) is b.status else b.with_status(BookingStatus.EXPIRED) for b in bookings]
+        effective = [
+            b
+            if effective_status(b.status, b.expires_at, now) is b.status
+            else b.with_status(BookingStatus.EXPIRED)
+            for b in bookings
+        ]
         if status is not None:
             effective = [b for b in effective if b.status is status]
         start = (page - 1) * page_size
-        return Page(effective[start:start + page_size], page, page_size, len(effective))
+        return Page(effective[start : start + page_size], page, page_size, len(effective))
 
-    def count_effective_holds(self, user_id: UUID, now: datetime, showtime_id: UUID | None = None) -> int:
-        stmt = select(func.count()).select_from(BookingModel).where(BookingModel.user_id == user_id, BookingModel.status == BookingStatus.HELD.value, BookingModel.expires_at > _to_db(now))
+    def count_effective_holds(
+        self, user_id: UUID, now: datetime, showtime_id: UUID | None = None
+    ) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(BookingModel)
+            .where(
+                BookingModel.user_id == user_id,
+                BookingModel.status == BookingStatus.HELD.value,
+                BookingModel.expires_at > _to_db(now),
+            )
+        )
         if showtime_id is not None:
             stmt = stmt.where(BookingModel.showtime_id == showtime_id)
         return int(self._session.scalar(stmt) or 0)
 
     def add(self, booking: Booking) -> None:
-        self._session.add(BookingModel(id=booking.id, user_id=booking.user_id, showtime_id=booking.showtime_id, status=booking.status.value, created_at=_to_db(booking.created_at), expires_at=_to_db(booking.expires_at), total_amount=booking.total_amount, confirmed_at=booking.confirmed_at, cancelled_at=booking.cancelled_at, booking_code=booking.booking_code))
+        self._session.add(
+            BookingModel(
+                id=booking.id,
+                user_id=booking.user_id,
+                showtime_id=booking.showtime_id,
+                status=booking.status.value,
+                created_at=_to_db(booking.created_at),
+                expires_at=_to_db(booking.expires_at),
+                total_amount=booking.total_amount,
+                confirmed_at=booking.confirmed_at,
+                cancelled_at=booking.cancelled_at,
+                booking_code=booking.booking_code,
+            )
+        )
         self._session.flush()
-        self._session.add_all(BookingItemModel(id=__import__('uuid').uuid4(), booking_id=booking.id, seat_id=item.seat_id, row_label=item.row_label, number=item.number, seat_type=item.seat_type.value, unit_price=item.unit_price) for item in booking.items)
+        self._session.add_all(
+            BookingItemModel(
+                id=__import__("uuid").uuid4(),
+                booking_id=booking.id,
+                seat_id=item.seat_id,
+                row_label=item.row_label,
+                number=item.number,
+                seat_type=item.seat_type.value,
+                unit_price=item.unit_price,
+            )
+            for item in booking.items
+        )
         self._session.flush()
 
     def update(self, booking: Booking) -> None:
-        self._session.execute(update(BookingModel).where(BookingModel.id == booking.id).values(status=booking.status.value, confirmed_at=booking.confirmed_at, cancelled_at=booking.cancelled_at, booking_code=booking.booking_code))
+        self._session.execute(
+            update(BookingModel)
+            .where(BookingModel.id == booking.id)
+            .values(
+                status=booking.status.value,
+                confirmed_at=booking.confirmed_at,
+                cancelled_at=booking.cancelled_at,
+                booking_code=booking.booking_code,
+            )
+        )
 
 
 class SqlAlchemySeatInventoryRepository:
@@ -325,24 +406,97 @@ class SqlAlchemySeatInventoryRepository:
         self._session = session
 
     def initialize(self, showtime_id: UUID, seats: list[Seat]) -> None:
-        self._session.add_all(ShowtimeSeatModel(showtime_id=showtime_id, seat_id=seat.id, state=InventoryState.AVAILABLE.value) for seat in seats)
+        self._session.add_all(
+            ShowtimeSeatModel(
+                showtime_id=showtime_id, seat_id=seat.id, state=InventoryState.AVAILABLE.value
+            )
+            for seat in seats
+        )
 
     def lock(self, showtime_id: UUID, seat_ids: list[UUID]) -> list[InventorySeat]:
-        rows = self._session.execute(select(ShowtimeSeatModel, SeatModel).join(SeatModel, SeatModel.id == ShowtimeSeatModel.seat_id).where(ShowtimeSeatModel.showtime_id == showtime_id, ShowtimeSeatModel.seat_id.in_(seat_ids)).order_by(ShowtimeSeatModel.seat_id).with_for_update()).all()
-        return [InventorySeat(_to_seat(seat), InventoryState(inv.state), inv.booking_id, _utc(inv.hold_expires_at) if inv.hold_expires_at else None) for inv, seat in rows]
+        rows = self._session.execute(
+            select(ShowtimeSeatModel, SeatModel)
+            .join(SeatModel, SeatModel.id == ShowtimeSeatModel.seat_id)
+            .where(
+                ShowtimeSeatModel.showtime_id == showtime_id,
+                ShowtimeSeatModel.seat_id.in_(seat_ids),
+            )
+            .order_by(ShowtimeSeatModel.seat_id)
+            .with_for_update()
+        ).all()
+        return [
+            InventorySeat(
+                _to_seat(seat),
+                InventoryState(inv.state),
+                inv.booking_id,
+                _utc(inv.hold_expires_at) if inv.hold_expires_at else None,
+            )
+            for inv, seat in rows
+        ]
 
-    def acquire(self, showtime_id: UUID, seat_ids: list[UUID], booking_id: UUID, expires_at: datetime, now: datetime) -> bool:
-        result = self._session.execute(update(ShowtimeSeatModel).where(ShowtimeSeatModel.showtime_id == showtime_id, ShowtimeSeatModel.seat_id.in_(seat_ids), or_(ShowtimeSeatModel.state == InventoryState.AVAILABLE.value, and_(ShowtimeSeatModel.state == InventoryState.HELD.value, ShowtimeSeatModel.hold_expires_at <= _to_db(now)))).values(state=InventoryState.HELD.value, booking_id=booking_id, hold_expires_at=_to_db(expires_at)))
-        return result.rowcount == len(seat_ids)
+    def acquire(
+        self,
+        showtime_id: UUID,
+        seat_ids: list[UUID],
+        booking_id: UUID,
+        expires_at: datetime,
+        now: datetime,
+    ) -> bool:
+        result = self._session.execute(
+            update(ShowtimeSeatModel)
+            .where(
+                ShowtimeSeatModel.showtime_id == showtime_id,
+                ShowtimeSeatModel.seat_id.in_(seat_ids),
+                or_(
+                    ShowtimeSeatModel.state == InventoryState.AVAILABLE.value,
+                    and_(
+                        ShowtimeSeatModel.state == InventoryState.HELD.value,
+                        ShowtimeSeatModel.hold_expires_at <= _to_db(now),
+                    ),
+                ),
+            )
+            .values(
+                state=InventoryState.HELD.value,
+                booking_id=booking_id,
+                hold_expires_at=_to_db(expires_at),
+            )
+        )
+        return isinstance(result, CursorResult) and result.rowcount == len(seat_ids)
 
     def mark_booked(self, booking_id: UUID, now: datetime) -> int:
-        result = self._session.execute(update(ShowtimeSeatModel).where(ShowtimeSeatModel.booking_id == booking_id, ShowtimeSeatModel.state == InventoryState.HELD.value, ShowtimeSeatModel.hold_expires_at > _to_db(now)).values(state=InventoryState.BOOKED.value, hold_expires_at=None))
-        return int(result.rowcount)
+        result = self._session.execute(
+            update(ShowtimeSeatModel)
+            .where(
+                ShowtimeSeatModel.booking_id == booking_id,
+                ShowtimeSeatModel.state == InventoryState.HELD.value,
+                ShowtimeSeatModel.hold_expires_at > _to_db(now),
+            )
+            .values(state=InventoryState.BOOKED.value, hold_expires_at=None)
+        )
+        return int(result.rowcount) if isinstance(result, CursorResult) else 0
 
     def release(self, booking_id: UUID) -> int:
-        result = self._session.execute(update(ShowtimeSeatModel).where(ShowtimeSeatModel.booking_id == booking_id, ShowtimeSeatModel.state == InventoryState.HELD.value).values(state=InventoryState.AVAILABLE.value, booking_id=None, hold_expires_at=None))
-        return int(result.rowcount)
+        result = self._session.execute(
+            update(ShowtimeSeatModel)
+            .where(
+                ShowtimeSeatModel.booking_id == booking_id,
+                ShowtimeSeatModel.state == InventoryState.HELD.value,
+            )
+            .values(state=InventoryState.AVAILABLE.value, booking_id=None, hold_expires_at=None)
+        )
+        return int(result.rowcount) if isinstance(result, CursorResult) else 0
 
     def statuses(self, showtime_id: UUID, now: datetime) -> dict[UUID, str]:
-        rows = self._session.scalars(select(ShowtimeSeatModel).where(ShowtimeSeatModel.showtime_id == showtime_id))
-        return {row.seat_id: (InventoryState.AVAILABLE.value if row.state == InventoryState.HELD.value and row.hold_expires_at is not None and _utc(row.hold_expires_at) <= now else row.state) for row in rows}
+        rows = self._session.scalars(
+            select(ShowtimeSeatModel).where(ShowtimeSeatModel.showtime_id == showtime_id)
+        )
+        return {
+            row.seat_id: (
+                InventoryState.AVAILABLE.value
+                if row.state == InventoryState.HELD.value
+                and row.hold_expires_at is not None
+                and _utc(row.hold_expires_at) <= now
+                else row.state
+            )
+            for row in rows
+        }

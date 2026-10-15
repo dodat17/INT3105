@@ -1,6 +1,7 @@
 import logging
 from functools import partial
 from pathlib import Path
+from typing import cast
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException
@@ -18,6 +19,7 @@ from app.domain.auth.service import AuthService
 from app.domain.booking.service import BookingService
 from app.domain.catalog.service import MovieService
 from app.domain.cinema.service import RoomService
+from app.domain.ports import UnitOfWorkFactory
 from app.domain.scheduling.service import ShowtimeService
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.persistence.uow import SqlAlchemyUnitOfWork, create_session_factory
@@ -46,7 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     session_factory = create_session_factory(settings.database_url, settings.db_pool_size)
-    uow_factory = partial(SqlAlchemyUnitOfWork, session_factory)
+    uow_factory = cast(UnitOfWorkFactory, partial(SqlAlchemyUnitOfWork, session_factory))
     tokens = JwtTokenService(settings.jwt_secret, settings.jwt_algorithm, settings.jwt_ttl_seconds)
 
     app = FastAPI(title=settings.app_name, version="0.1.0")
@@ -57,7 +59,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.room_service = RoomService(uow_factory)
     app.state.showtime_service = ShowtimeService(uow_factory, ZoneInfo(settings.cinema_timezone))
     app.state.booking_service = BookingService(
-        uow_factory, settings.hold_ttl_seconds, settings.max_holds_per_showtime, settings.max_active_holds
+        uow_factory,
+        settings.hold_ttl_seconds,
+        settings.max_holds_per_showtime,
+        settings.max_active_holds,
     )
     # Added last runs first: request ID wraps authentication so 401s carry it too.
     app.add_middleware(AuthMiddleware, tokens=tokens)
