@@ -111,7 +111,20 @@ class BookingService:
             )
             uow.bookings.add(booking)
             if not uow.inventory.acquire(showtime_id, ordered_ids, booking.id, expires_at, now):
-                raise SeatUnavailableError(ordered_ids)
+                conflicting = [
+                    row.seat.id
+                    for row in uow.inventory.lock(showtime_id, ordered_ids)
+                    if row.booking_id != booking.id
+                    and (
+                        row.state is InventoryState.BOOKED
+                        or (
+                            row.state is InventoryState.HELD
+                            and row.hold_expires_at is not None
+                            and row.hold_expires_at > now
+                        )
+                    )
+                ]
+                raise SeatUnavailableError(conflicting)
             uow.commit()
             return booking
 
@@ -156,7 +169,7 @@ class BookingService:
             if showtime is None or not showtime.is_open_for_booking or now >= showtime.starts_at:
                 raise ShowtimeNotBookableError
             if uow.inventory.mark_booked(booking.id, now) != len(booking.items):
-                raise SeatUnavailableError
+                raise SeatUnavailableError([item.seat_id for item in booking.items])
             confirmed = booking.confirm(now, token_hex(4).upper())
             uow.bookings.update(confirmed)
             uow.commit()
