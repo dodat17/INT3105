@@ -1,7 +1,11 @@
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, update
 
+from app.bootstrap.settings import Settings
+from app.infrastructure.persistence.models import BookingModel
 from tests.api.conftest import auth_header, create_showtime
 
 
@@ -167,3 +171,72 @@ def test_confirmed_booking_cannot_be_cancelled(
     )
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "INVALID_BOOKING_STATE"
+
+
+def test_list_filters_on_effective_status_in_database(
+    client: TestClient,
+    settings: Settings,
+    admin_token: str,
+    customer_token: str,
+    setup: dict[str, str],
+) -> None:
+    showtime_id, seats = _showtime_and_seats(client, admin_token, setup)
+
+    def hold(seat_id: str) -> dict[str, object]:
+        response = client.post(
+            "/api/v1/bookings",
+            json={"showtimeId": showtime_id, "seatIds": [seat_id]},
+            headers=auth_header(customer_token),
+        )
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    active = hold(seats[0])
+    confirmed = hold(seats[1])
+    client.post(
+        f"/api/v1/bookings/{confirmed['id']}/confirm",
+        headers=auth_header(customer_token),
+    )
+    expired = hold(seats[2])
+    engine = create_engine(settings.database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            update(BookingModel)
+            .where(BookingModel.id == UUID(str(expired["id"])))
+            .values(expires_at=datetime.now(UTC) - timedelta(seconds=1))
+        )
+    engine.dispose()
+
+    cancelled = hold(seats[3])
+    client.delete(f"/api/v1/bookings/{cancelled['id']}", headers=auth_header(customer_token))
+
+    expected = {
+        "HELD": {active["id"]},
+        "EXPIRED": {expired["id"]},
+        "CONFIRMED": {confirmed["id"]},
+        "CANCELLED": {cancelled["id"]},
+    }
+    for status, ids in expected.items():
+        response = client.get(
+            "/api/v1/me/bookings",
+            params={"status": status},
+            headers=auth_header(customer_token),
+        )
+        assert response.status_code == 200
+        assert {item["id"] for item in response.json()["items"]} == ids
+        assert response.json()["totalItems"] == 1
+
+    page = client.get(
+        "/api/v1/me/bookings",
+        params={"page": 2, "pageSize": 2},
+        headers=auth_header(customer_token),
+    )
+    assert page.status_code == 200
+    assert page.json()["totalItems"] == 4
+    assert len(page.json()["items"]) == 2
+
+    unfiltered = client.get("/api/v1/me/bookings", headers=auth_header(customer_token)).json()[
+        "items"
+    ]
+    expired_item = next(item for item in unfiltered if item["id"] == expired["id"])
+    assert expired_item["status"] == "EXPIRED"

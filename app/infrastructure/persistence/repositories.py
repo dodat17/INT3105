@@ -13,7 +13,6 @@ from app.domain.booking.model import (
     BookingStatus,
     InventorySeat,
     InventoryState,
-    effective_status,
 )
 from app.domain.catalog.model import Movie
 from app.domain.cinema.model import Room, Seat, SeatType
@@ -323,24 +322,37 @@ class SqlAlchemyBookingRepository:
     def list_for_user(
         self, user_id: UUID, status: BookingStatus | None, now: datetime, page: int, page_size: int
     ) -> Page[Booking]:
+        stmt = select(BookingModel).where(BookingModel.user_id == user_id)
+        decision_instant = _to_db(now)
+        if status is BookingStatus.HELD:
+            stmt = stmt.where(
+                BookingModel.status == BookingStatus.HELD.value,
+                BookingModel.expires_at > decision_instant,
+            )
+        elif status is BookingStatus.EXPIRED:
+            stmt = stmt.where(
+                BookingModel.status == BookingStatus.HELD.value,
+                BookingModel.expires_at <= decision_instant,
+            )
+        elif status is not None:
+            stmt = stmt.where(BookingModel.status == status.value)
+
+        total = self._session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
         rows = list(
             self._session.scalars(
-                select(BookingModel)
-                .where(BookingModel.user_id == user_id)
-                .order_by(BookingModel.created_at.desc(), BookingModel.id)
+                stmt.order_by(BookingModel.created_at.desc(), BookingModel.id.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
             )
         )
         bookings = [_to_booking(row, self._items(row.id)) for row in rows]
         effective = [
-            b
-            if effective_status(b.status, b.expires_at, now) is b.status
-            else b.with_status(BookingStatus.EXPIRED)
-            for b in bookings
+            booking.with_status(BookingStatus.EXPIRED)
+            if booking.status is BookingStatus.HELD and booking.expires_at <= now
+            else booking
+            for booking in bookings
         ]
-        if status is not None:
-            effective = [b for b in effective if b.status is status]
-        start = (page - 1) * page_size
-        return Page(effective[start : start + page_size], page, page_size, len(effective))
+        return Page(effective, page, page_size, int(total))
 
     def count_effective_holds(
         self, user_id: UUID, now: datetime, showtime_id: UUID | None = None
