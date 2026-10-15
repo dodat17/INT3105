@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, update
 
 from app.bootstrap.settings import Settings
-from app.infrastructure.persistence.models import BookingModel
+from app.infrastructure.persistence.models import BookingModel, ShowtimeModel
 from tests.api.conftest import auth_header, create_showtime
 
 
@@ -73,6 +73,7 @@ def test_occupied_seat_returns_conflict_without_partial_hold(
 
     assert second.status_code == 409
     assert second.json()["error"]["code"] == "SEAT_UNAVAILABLE"
+    assert second.json()["error"]["details"]["seatIds"] == [seats[0]]
     seat_map = client.get(f"/api/v1/showtimes/{showtime_id}/seats").json()
     statuses = {seat["id"]: seat["status"] for seat in seat_map["seats"]}
     assert statuses[seats[0]] == "HELD"
@@ -97,8 +98,16 @@ def test_owner_lists_views_and_cancels_booking(
     assert detail.status_code == 200
     assert detail.json()["items"][0]["seatId"] == seats[0]
     assert detail.json()["movie"]["id"] == setup["movie"]
-    assert detail.json()["room"]["id"] == setup["room"]
+    assert detail.json()["auditorium"]["id"] == setup["room"]
     assert detail.json()["showtime"]["id"] == showtime_id
+    assert detail.json()["seats"] == [
+        {
+            "seatId": seats[0],
+            "rowLabel": "A",
+            "seatNumber": 1,
+            "unitPrice": 90000,
+        }
+    ]
 
     cancelled = client.delete(
         f"/api/v1/bookings/{created['id']}", headers=auth_header(customer_token)
@@ -116,6 +125,13 @@ def test_owner_lists_views_and_cancels_booking(
         next(seat for seat in seat_map["seats"] if seat["id"] == seats[0])["status"] == "AVAILABLE"
     )
 
+    rebooked = client.post(
+        "/api/v1/bookings",
+        json={"showtimeId": showtime_id, "seatIds": [seats[0]]},
+        headers=auth_header(customer_token),
+    )
+    assert rebooked.status_code == 201
+
 
 def test_booking_validation_and_owner_hiding(
     client: TestClient, admin_token: str, customer_token: str, setup: dict[str, str]
@@ -127,6 +143,8 @@ def test_booking_validation_and_owner_hiding(
         headers=auth_header(customer_token),
     )
     assert duplicate.status_code == 400
+    assert duplicate.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert duplicate.json()["error"]["details"] == {"fields": ["seatIds"]}
 
     booking = client.post(
         "/api/v1/bookings",
@@ -141,12 +159,14 @@ def test_booking_validation_and_owner_hiding(
 
     other_token = login(client, "other@example.test")
 
-    assert (
-        client.get(
-            f"/api/v1/bookings/{booking['id']}", headers=auth_header(other_token)
-        ).status_code
-        == 404
+    hidden = client.get(f"/api/v1/bookings/{booking['id']}", headers=auth_header(other_token))
+    assert hidden.status_code == 404
+    assert hidden.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
+    hidden_from_admin = client.get(
+        f"/api/v1/bookings/{booking['id']}", headers=auth_header(admin_token)
     )
+    assert hidden_from_admin.status_code == 404
+    assert hidden_from_admin.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
     assert (
         client.delete(
             f"/api/v1/bookings/{booking['id']}", headers=auth_header(other_token)
@@ -240,3 +260,75 @@ def test_list_filters_on_effective_status_in_database(
     ]
     expired_item = next(item for item in unfiltered if item["id"] == expired["id"])
     assert expired_item["status"] == "EXPIRED"
+
+
+def test_closed_showtime_rejects_new_booking(
+    client: TestClient,
+    settings: Settings,
+    admin_token: str,
+    customer_token: str,
+    setup: dict[str, str],
+) -> None:
+    showtime_id, seats = _showtime_and_seats(client, admin_token, setup)
+    engine = create_engine(settings.database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            update(ShowtimeModel)
+            .where(ShowtimeModel.id == UUID(showtime_id))
+            .values(is_open_for_booking=False)
+        )
+    engine.dispose()
+
+    response = client.post(
+        "/api/v1/bookings",
+        json={"showtimeId": showtime_id, "seatIds": [seats[0]]},
+        headers=auth_header(customer_token),
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "SHOWTIME_NOT_BOOKABLE"
+
+
+def test_booking_rejects_invalid_seat_sets_and_started_showtime(
+    client: TestClient, admin_token: str, customer_token: str, setup: dict[str, str]
+) -> None:
+    showtime_id, seats = _showtime_and_seats(client, admin_token, setup)
+    for seat_ids in ([], seats[:9]):
+        response = client.post(
+            "/api/v1/bookings",
+            json={"showtimeId": showtime_id, "seatIds": seat_ids},
+            headers=auth_header(customer_token),
+        )
+        assert response.status_code == 400
+        assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+        assert response.json()["error"]["details"] == {"fields": ["seatIds"]}
+
+    other_showtime = create_showtime(
+        client, admin_token, setup, _future_start(), roomId=setup["other_room"]
+    ).json()
+    other_seat = client.get(f"/api/v1/showtimes/{other_showtime['id']}/seats").json()["seats"][0][
+        "id"
+    ]
+    wrong_room = client.post(
+        "/api/v1/bookings",
+        json={"showtimeId": showtime_id, "seatIds": [other_seat]},
+        headers=auth_header(customer_token),
+    )
+    assert wrong_room.status_code == 400
+    assert wrong_room.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert wrong_room.json()["error"]["details"] == {"fields": ["seatIds"]}
+
+    started = create_showtime(
+        client,
+        admin_token,
+        setup,
+        (datetime.now(UTC) - timedelta(hours=3)).isoformat(),
+    ).json()
+    started_seat = client.get(f"/api/v1/showtimes/{started['id']}/seats").json()["seats"][0]["id"]
+    response = client.post(
+        "/api/v1/bookings",
+        json={"showtimeId": started["id"], "seatIds": [started_seat]},
+        headers=auth_header(customer_token),
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "SHOWTIME_NOT_BOOKABLE"

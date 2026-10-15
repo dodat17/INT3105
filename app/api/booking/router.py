@@ -31,16 +31,27 @@ class MovieRef(CamelModel):
     title: str
 
 
-class RoomRef(CamelModel):
+class AuditoriumRef(CamelModel):
     id: UUID
     name: str
 
 
 class ShowtimeRef(CamelModel):
     id: UUID
+    movie: MovieRef
+    auditorium: AuditoriumRef
     starts_at: datetime
     ends_at: datetime
-    base_price: int
+    ticket_price: int
+    currency: str = "VND"
+    is_open_for_booking: bool
+
+
+class BookingSeatResponse(CamelModel):
+    seat_id: UUID
+    row_label: str
+    seat_number: int
+    unit_price: int
 
 
 class BookingResponse(CamelModel):
@@ -82,8 +93,9 @@ class BookingResponse(CamelModel):
 
 class BookingDetailResponse(BookingResponse):
     movie: MovieRef
-    room: RoomRef
     showtime: ShowtimeRef
+    auditorium: AuditoriumRef
+    seats: list[BookingSeatResponse]
 
 
 @router.post("/bookings", status_code=201, summary="Giữ ghế")
@@ -118,16 +130,30 @@ def get_booking(
 ) -> BookingDetailResponse:
     details = service.details(actor, booking_id)
     booking = BookingResponse.from_domain(details.booking)
+    movie = MovieRef(id=details.movie.id, title=details.movie.title)
+    auditorium = AuditoriumRef(id=details.room.id, name=details.room.name)
     return BookingDetailResponse(
         **booking.model_dump(),
-        movie=MovieRef(id=details.movie.id, title=details.movie.title),
-        room=RoomRef(id=details.room.id, name=details.room.name),
+        movie=movie,
+        auditorium=auditorium,
         showtime=ShowtimeRef(
             id=details.showtime.id,
+            movie=movie,
+            auditorium=auditorium,
             starts_at=details.showtime.starts_at,
             ends_at=details.showtime.ends_at,
-            base_price=details.showtime.base_price,
+            ticket_price=details.showtime.base_price,
+            is_open_for_booking=details.showtime.is_open_for_booking,
         ),
+        seats=[
+            BookingSeatResponse(
+                seat_id=item.seat_id,
+                row_label=item.row_label,
+                seat_number=item.number,
+                unit_price=item.unit_price,
+            )
+            for item in details.booking.items
+        ],
     )
 
 

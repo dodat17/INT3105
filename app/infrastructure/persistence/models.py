@@ -3,6 +3,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -96,12 +97,22 @@ class ShowtimeModel(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     base_price: Mapped[int] = mapped_column(BigInteger)
+    is_open_for_booking: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
 
 class BookingModel(Base):
     __tablename__ = "bookings"
     __table_args__ = (
-        CheckConstraint("status IN ('HELD', 'CONFIRMED', 'CANCELLED')", name="status"),
+        CheckConstraint(
+            "status IN ('HELD', 'CONFIRMED', 'CANCELLED', 'EXPIRED')",
+            name="status",
+        ),
+        CheckConstraint(
+            "(status = 'CONFIRMED' AND confirmed_at IS NOT NULL AND booking_code IS NOT NULL) "
+            "OR (status <> 'CONFIRMED' AND confirmed_at IS NULL AND booking_code IS NULL)",
+            name="confirmed",
+        ),
+        CheckConstraint("(status = 'CANCELLED') = (cancelled_at IS NOT NULL)", name="cancelled"),
         CheckConstraint("total_amount >= 0", name="total_non_negative"),
     )
 
@@ -139,7 +150,14 @@ class BookingItemModel(Base):
 
 class ShowtimeSeatModel(Base):
     __tablename__ = "showtime_seats"
-    __table_args__ = (CheckConstraint("state IN ('AVAILABLE', 'HELD', 'BOOKED')", name="state"),)
+    __table_args__ = (
+        CheckConstraint(
+            "(state = 'AVAILABLE' AND booking_id IS NULL AND hold_expires_at IS NULL) OR "
+            "(state = 'HELD' AND booking_id IS NOT NULL AND hold_expires_at IS NOT NULL) OR "
+            "(state = 'BOOKED' AND booking_id IS NOT NULL AND hold_expires_at IS NULL)",
+            name="state",
+        ),
+    )
 
     showtime_id: Mapped[UUID] = mapped_column(
         ForeignKey("showtimes.id", ondelete="CASCADE"), primary_key=True

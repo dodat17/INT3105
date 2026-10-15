@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.domain.catalog.model import Movie
 from app.domain.cinema.model import Room, Seat, SeatType
-from app.domain.errors import BusinessRuleViolation
+from app.domain.errors import BookingValidationError
 from app.domain.scheduling.model import Showtime
 
 MIN_SEATS = 1
@@ -68,9 +68,9 @@ class Booking:
 
 def validate_seat_ids(seat_ids: list[UUID]) -> list[UUID]:
     if not MIN_SEATS <= len(seat_ids) <= MAX_SEATS:
-        raise BusinessRuleViolation("Mỗi booking phải có từ 1 đến 8 ghế.")
+        raise BookingValidationError("Mỗi booking phải có từ 1 đến 8 ghế.", "seatIds")
     if len(set(seat_ids)) != len(seat_ids):
-        raise BusinessRuleViolation("Danh sách ghế không được trùng lặp.")
+        raise BookingValidationError("Danh sách ghế không được trùng lặp.", "seatIds")
     return seat_ids
 
 

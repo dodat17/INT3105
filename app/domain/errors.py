@@ -1,3 +1,6 @@
+from collections.abc import Sequence
+
+
 class DomainError(Exception):
     """Base class for business errors; the API layer maps each subclass to HTTP."""
 
@@ -12,6 +15,12 @@ class ForbiddenError(DomainError):
 
 class BusinessRuleViolation(DomainError):
     pass
+
+
+class BookingValidationError(DomainError):
+    def __init__(self, message: str, *fields: str) -> None:
+        super().__init__(message)
+        self.fields = fields
 
 
 class EmailAlreadyUsedError(DomainError):
@@ -35,7 +44,9 @@ class ShowtimeOverlapError(DomainError):
 
 
 class SeatUnavailableError(DomainError):
-    pass
+    def __init__(self, seat_ids: Sequence[object] | None = None) -> None:
+        super().__init__()
+        self.seat_ids = tuple(str(seat_id) for seat_id in (seat_ids or []))
 
 
 class BookingExpiredError(DomainError):

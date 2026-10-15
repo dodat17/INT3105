@@ -162,6 +162,7 @@ def _to_showtime(row: ShowtimeModel) -> Showtime:
         starts_at=_utc(row.starts_at),
         ends_at=_utc(row.ends_at),
         base_price=row.base_price,
+        is_open_for_booking=row.is_open_for_booking,
     )
 
 
@@ -277,6 +278,7 @@ class SqlAlchemyShowtimeRepository:
                 starts_at=_to_db(showtime.starts_at),
                 ends_at=_to_db(showtime.ends_at),
                 base_price=showtime.base_price,
+                is_open_for_booking=showtime.is_open_for_booking,
             )
         )
 

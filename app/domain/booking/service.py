@@ -14,7 +14,7 @@ from app.domain.booking.model import (
 )
 from app.domain.errors import (
     BookingExpiredError,
-    BusinessRuleViolation,
+    BookingValidationError,
     ForbiddenError,
     HoldLimitExceededError,
     InvalidBookingStateError,
@@ -62,11 +62,12 @@ class BookingService:
                 raise NotFoundError
             inventory = uow.inventory.lock(showtime_id, ordered_ids)
             now = uow.clock.now()
-            if now >= showtime.starts_at:
+            if not showtime.is_open_for_booking or now >= showtime.starts_at:
                 raise ShowtimeNotBookableError
             if len(inventory) != len(ordered_ids):
-                raise BusinessRuleViolation(
-                    "Ghế không tồn tại hoặc không thuộc phòng của suất chiếu."
+                raise BookingValidationError(
+                    "Ghế không tồn tại hoặc không thuộc phòng của suất chiếu.",
+                    "seatIds",
                 )
             if (
                 uow.bookings.count_effective_holds(actor.user_id, now, showtime_id)
@@ -75,16 +76,18 @@ class BookingService:
                 raise HoldLimitExceededError
             if uow.bookings.count_effective_holds(actor.user_id, now) >= self._max_active:
                 raise HoldLimitExceededError
-            if any(
-                row.state is InventoryState.BOOKED
+            unavailable = sorted(
+                row.seat.id
+                for row in inventory
+                if row.state is InventoryState.BOOKED
                 or (
                     row.state is InventoryState.HELD
                     and row.hold_expires_at is not None
                     and row.hold_expires_at > now
                 )
-                for row in inventory
-            ):
-                raise SeatUnavailableError
+            )
+            if unavailable:
+                raise SeatUnavailableError(unavailable)
             expires_at = min(now + self._hold_ttl, showtime.starts_at)
             items = [
                 BookingItem(
@@ -108,12 +111,11 @@ class BookingService:
             )
             uow.bookings.add(booking)
             if not uow.inventory.acquire(showtime_id, ordered_ids, booking.id, expires_at, now):
-                raise SeatUnavailableError
+                raise SeatUnavailableError(ordered_ids)
             uow.commit()
             return booking
 
     def get(self, actor: Actor, booking_id: UUID) -> Booking:
-        self._customer(actor)
         with self._uow_factory() as uow:
             booking = self._owned(uow.bookings.get(booking_id), actor)
             now = uow.clock.now()
@@ -141,7 +143,6 @@ class BookingService:
             return uow.bookings.list_for_user(actor.user_id, status, now, page, page_size)
 
     def confirm(self, actor: Actor, booking_id: UUID) -> Booking:
-        self._customer(actor)
         with self._uow_factory() as uow:
             booking = self._owned(uow.bookings.get(booking_id, lock=True), actor)
             now = uow.clock.now()
@@ -152,7 +153,7 @@ class BookingService:
             if now >= booking.expires_at:
                 raise BookingExpiredError
             showtime = uow.showtimes.get(booking.showtime_id)
-            if showtime is None or now >= showtime.starts_at:
+            if showtime is None or not showtime.is_open_for_booking or now >= showtime.starts_at:
                 raise ShowtimeNotBookableError
             if uow.inventory.mark_booked(booking.id, now) != len(booking.items):
                 raise SeatUnavailableError
@@ -162,7 +163,6 @@ class BookingService:
             return confirmed
 
     def cancel(self, actor: Actor, booking_id: UUID) -> None:
-        self._customer(actor)
         with self._uow_factory() as uow:
             booking = self._owned(uow.bookings.get(booking_id, lock=True), actor)
             now = uow.clock.now()
