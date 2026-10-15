@@ -58,6 +58,8 @@ class BookingService:
             showtime = uow.showtimes.get(showtime_id)
             if showtime is None:
                 raise NotFoundError
+            if uow.users.lock(actor.user_id) is None:
+                raise NotFoundError
             inventory = uow.inventory.lock(showtime_id, ordered_ids)
             now = uow.clock.now()
             if now >= showtime.starts_at:

@@ -26,6 +26,9 @@ class InMemoryUsers:
     def get(self, user_id: UUID) -> User | None:
         return self.rows.get(user_id)
 
+    def lock(self, user_id: UUID) -> User | None:
+        return self.get(user_id)
+
     def get_by_email(self, email: str) -> User | None:
         return next((u for u in self.rows.values() if u.email == email), None)
 
