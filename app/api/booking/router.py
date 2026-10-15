@@ -26,6 +26,23 @@ class BookingItemResponse(CamelModel):
     unit_price: int
 
 
+class MovieRef(CamelModel):
+    id: UUID
+    title: str
+
+
+class RoomRef(CamelModel):
+    id: UUID
+    name: str
+
+
+class ShowtimeRef(CamelModel):
+    id: UUID
+    starts_at: datetime
+    ends_at: datetime
+    base_price: int
+
+
 class BookingResponse(CamelModel):
     id: UUID
     showtime_id: UUID
@@ -63,6 +80,12 @@ class BookingResponse(CamelModel):
         )
 
 
+class BookingDetailResponse(BookingResponse):
+    movie: MovieRef
+    room: RoomRef
+    showtime: ShowtimeRef
+
+
 @router.post("/bookings", status_code=201, summary="Giữ ghế")
 def create_booking(
     payload: CreateBookingRequest, actor: ActorDep, service: BookingServiceDep, response: Response
@@ -90,8 +113,22 @@ def list_bookings(
 
 
 @router.get("/bookings/{booking_id}", summary="Chi tiết booking")
-def get_booking(booking_id: UUID, actor: ActorDep, service: BookingServiceDep) -> BookingResponse:
-    return BookingResponse.from_domain(service.get(actor, booking_id))
+def get_booking(
+    booking_id: UUID, actor: ActorDep, service: BookingServiceDep
+) -> BookingDetailResponse:
+    details = service.details(actor, booking_id)
+    booking = BookingResponse.from_domain(details.booking)
+    return BookingDetailResponse(
+        **booking.model_dump(),
+        movie=MovieRef(id=details.movie.id, title=details.movie.title),
+        room=RoomRef(id=details.room.id, name=details.room.name),
+        showtime=ShowtimeRef(
+            id=details.showtime.id,
+            starts_at=details.showtime.starts_at,
+            ends_at=details.showtime.ends_at,
+            base_price=details.showtime.base_price,
+        ),
+    )
 
 
 @router.post("/bookings/{booking_id}/confirm", summary="Xác nhận booking")

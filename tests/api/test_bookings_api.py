@@ -92,6 +92,9 @@ def test_owner_lists_views_and_cancels_booking(
     detail = client.get(f"/api/v1/bookings/{created['id']}", headers=auth_header(customer_token))
     assert detail.status_code == 200
     assert detail.json()["items"][0]["seatId"] == seats[0]
+    assert detail.json()["movie"]["id"] == setup["movie"]
+    assert detail.json()["room"]["id"] == setup["room"]
+    assert detail.json()["showtime"]["id"] == showtime_id
 
     cancelled = client.delete(
         f"/api/v1/bookings/{created['id']}", headers=auth_header(customer_token)

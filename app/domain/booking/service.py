@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 from app.domain.auth.model import Actor, Role
 from app.domain.booking.model import (
     Booking,
+    BookingDetails,
     BookingItem,
     BookingStatus,
     InventoryState,
@@ -116,6 +117,18 @@ class BookingService:
             now = uow.clock.now()
         status = effective_status(booking.status, booking.expires_at, now)
         return booking if status is booking.status else booking.with_status(status)
+
+    def details(self, actor: Actor, booking_id: UUID) -> BookingDetails:
+        booking = self.get(actor, booking_id)
+        with self._uow_factory() as uow:
+            showtime = uow.showtimes.get(booking.showtime_id)
+            if showtime is None:
+                raise NotFoundError
+            movie = uow.movies.get(showtime.movie_id)
+            room = uow.rooms.get(showtime.room_id)
+            if movie is None or room is None:
+                raise NotFoundError
+        return BookingDetails(booking=booking, movie=movie, room=room, showtime=showtime)
 
     def list(
         self, actor: Actor, status: BookingStatus | None, page: int, page_size: int

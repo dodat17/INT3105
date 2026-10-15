@@ -3,8 +3,10 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from app.domain.cinema.model import Seat, SeatType
+from app.domain.catalog.model import Movie
+from app.domain.cinema.model import Room, Seat, SeatType
 from app.domain.errors import BusinessRuleViolation
+from app.domain.scheduling.model import Showtime
 
 MIN_SEATS = 1
 MAX_SEATS = 8
@@ -76,3 +78,11 @@ def effective_status(status: BookingStatus, expires_at: datetime, now: datetime)
     if status is BookingStatus.HELD and now >= expires_at:
         return BookingStatus.EXPIRED
     return status
+
+
+@dataclass(frozen=True)
+class BookingDetails:
+    booking: Booking
+    movie: Movie
+    room: Room
+    showtime: Showtime
