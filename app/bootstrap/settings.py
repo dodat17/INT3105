@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     jwt_ttl_seconds: int = 3600
     bcrypt_rounds: int = 12
     hold_ttl_seconds: int = 300
-    max_active_holds: int = 3
+    max_holds_per_showtime: int = 2
+    max_active_holds: int = 5
     db_pool_size: int = 10
     cinema_timezone: str = "Asia/Ho_Chi_Minh"
 

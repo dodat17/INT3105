@@ -5,14 +5,19 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.domain.errors import (
+    BookingExpiredError,
     BusinessRuleViolation,
     DomainError,
     EmailAlreadyUsedError,
     ForbiddenError,
+    HoldLimitExceededError,
+    InvalidBookingStateError,
     InvalidCredentialsError,
     InvalidTokenError,
     NotFoundError,
     RoomNameAlreadyUsedError,
+    SeatUnavailableError,
+    ShowtimeNotBookableError,
     ShowtimeOverlapError,
 )
 
@@ -32,6 +37,11 @@ _DOMAIN_ERRORS: dict[type[DomainError], tuple[int, str, str]] = {
         "SHOWTIME_OVERLAP",
         "Suất chiếu bị trùng giờ với một suất khác trong cùng phòng.",
     ),
+    SeatUnavailableError: (409, "SEAT_UNAVAILABLE", "Một hoặc nhiều ghế không còn trống."),
+    BookingExpiredError: (409, "BOOKING_EXPIRED", "Booking đã hết hạn."),
+    InvalidBookingStateError: (409, "INVALID_BOOKING_STATE", "Trạng thái booking không hợp lệ."),
+    ShowtimeNotBookableError: (409, "SHOWTIME_NOT_BOOKABLE", "Suất chiếu không còn nhận đặt chỗ."),
+    HoldLimitExceededError: (409, "HOLD_LIMIT_EXCEEDED", "Đã vượt giới hạn booking đang giữ."),
 }
 
 
