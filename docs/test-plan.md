@@ -1,6 +1,6 @@
 # Kế hoạch kiểm thử
 
-Triển khai `T-01` … `T-30` của mục 9.1 [requirements.md](../requirements.md) thành ca kiểm thử cụ thể. Mọi bài kiểm thử bắt buộc phải tồn tại trong CI trước khi Pha 1 được nghiệm thu.
+Triển khai `T-01` … `T-30` của mục 9.1 [requirements.md](./requirements.md) thành ca kiểm thử cụ thể. Mọi bài kiểm thử bắt buộc phải tồn tại trong CI trước khi Pha 1 được nghiệm thu.
 
 ## 1. Tầng kiểm thử
 

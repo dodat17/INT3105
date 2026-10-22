@@ -1,6 +1,6 @@
 # Kế hoạch đo tải trên Kaggle CPU
 
-Triển khai mục 10 của [requirements.md](../requirements.md) thành quy trình thực hiện được. Mục tiêu là **baseline trung thực**, không phải con số đẹp.
+Triển khai mục 10 của [requirements.md](./requirements.md) thành quy trình thực hiện được. Mục tiêu là **baseline trung thực**, không phải con số đẹp.
 
 ## 1. Ràng buộc định hình kế hoạch này
 

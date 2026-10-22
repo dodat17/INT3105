@@ -1,6 +1,6 @@
 # Mô hình dữ liệu
 
-Thiết kế schema, ràng buộc, index và chiến lược seed. Đối chiếu mục 7 của [requirements.md](../requirements.md).
+Thiết kế schema, ràng buộc, index và chiến lược seed. Đối chiếu mục 7 của [requirements.md](./requirements.md).
 
 ## 1. Sơ đồ quan hệ
 

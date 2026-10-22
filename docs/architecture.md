@@ -1,6 +1,6 @@
 # Kiến trúc Pha 1
 
-Tài liệu mô tả cấu trúc mã nguồn, chiều phụ thuộc, port của tầng nghiệp vụ và luồng xử lý các use case ghi dữ liệu. Đối chiếu mục 8.1 của [requirements.md](../requirements.md).
+Tài liệu mô tả cấu trúc mã nguồn, chiều phụ thuộc, port của tầng nghiệp vụ và luồng xử lý các use case ghi dữ liệu. Đối chiếu mục 8.1 của [requirements.md](./requirements.md).
 
 ## 1. Kiến trúc
 

@@ -1,6 +1,6 @@
 # Kế hoạch thực hiện
 
-Chi tiết hóa các mốc M1–M6 ở mục 12.3 của [requirements.md](../requirements.md) thành công việc có điều kiện hoàn thành kiểm chứng được.
+Chi tiết hóa các mốc M1–M6 ở mục 12.3 của [requirements.md](./requirements.md) thành công việc có điều kiện hoàn thành kiểm chứng được.
 
 ## 1. Nguyên tắc sắp xếp thứ tự
 
