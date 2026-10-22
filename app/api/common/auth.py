@@ -5,7 +5,7 @@ from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.api.common.errors import UNAUTHORIZED, error_response
+from app.api.common.errors import UNAUTHENTICATED, error_response
 from app.domain.auth.model import Actor
 from app.domain.errors import InvalidTokenError
 from app.domain.ports import TokenService
@@ -46,7 +46,7 @@ class AuthMiddleware:
                 raise InvalidTokenError
             actor = self.tokens.decode(token.strip())
         except InvalidTokenError:
-            status_code, code, message = UNAUTHORIZED
+            status_code, code, message = UNAUTHENTICATED
             response = error_response(
                 request,
                 status_code=status_code,

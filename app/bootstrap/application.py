@@ -4,10 +4,11 @@ from pathlib import Path
 from typing import cast
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
+from starlette.routing import Match
 from starlette.types import Scope
 
 from app.api.common.auth import AuthMiddleware
@@ -73,6 +74,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     register_exception_handlers(app)
     app.include_router(root_router)
+    known_routes = list(app.router.routes)
 
     # Unknown API and health paths answer with a JSON 404, never the SPA's index.html.
     @app.api_route(
@@ -85,8 +87,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         include_in_schema=False,
     )
-    def api_not_found(path: str) -> None:
+    def api_not_found(request: Request, path: str) -> None:
         del path
+        # The catch-all also matches known paths with a wrong method: that is a 405, not a 404.
+        allowed = [
+            method
+            for method in ("DELETE", "GET", "PATCH", "POST", "PUT")
+            if any(
+                route.matches({**request.scope, "method": method})[0] is Match.FULL
+                for route in known_routes
+            )
+        ]
+        if allowed:
+            raise HTTPException(
+                status_code=405,
+                detail="Method không được hỗ trợ.",
+                headers={"Allow": ", ".join(allowed)},
+            )
         raise HTTPException(status_code=404, detail="Không tìm thấy tài nguyên.")
 
     frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"

@@ -1,8 +1,10 @@
+import logging
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException
 
 from app.domain.errors import (
     BookingExpiredError,
@@ -22,7 +24,18 @@ from app.domain.errors import (
     ShowtimeOverlapError,
 )
 
-UNAUTHORIZED = (401, "UNAUTHORIZED", "Yêu cầu đăng nhập.")
+logger = logging.getLogger("app.error")
+
+UNAUTHENTICATED = (401, "UNAUTHENTICATED", "Yêu cầu đăng nhập.")
+
+_HTTP_ERROR_CODES = {
+    400: "VALIDATION_ERROR",
+    404: "RESOURCE_NOT_FOUND",
+    405: "METHOD_NOT_ALLOWED",
+    413: "PAYLOAD_TOO_LARGE",
+    415: "UNSUPPORTED_MEDIA_TYPE",
+    503: "SERVICE_UNAVAILABLE",
+}
 
 # status, code, default message
 _DOMAIN_ERRORS: dict[type[DomainError], tuple[int, str, str]] = {
@@ -32,7 +45,7 @@ _DOMAIN_ERRORS: dict[type[DomainError], tuple[int, str, str]] = {
     BookingValidationError: (400, "VALIDATION_ERROR", "Dữ liệu yêu cầu không hợp lệ."),
     EmailAlreadyUsedError: (409, "EMAIL_ALREADY_USED", "Email đã được sử dụng."),
     InvalidCredentialsError: (401, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng."),
-    InvalidTokenError: UNAUTHORIZED,
+    InvalidTokenError: UNAUTHENTICATED,
     RoomNameAlreadyUsedError: (409, "ROOM_NAME_ALREADY_USED", "Tên phòng đã tồn tại."),
     ShowtimeOverlapError: (
         409,
@@ -87,14 +100,29 @@ def register_exception_handlers(app: FastAPI) -> None:
             details=details,
         )
 
+    # Starlette's base class also covers routing errors (404, 405) raised outside FastAPI.
     @app.exception_handler(HTTPException)
     async def handle_http_exception(request: Request, exc: HTTPException) -> JSONResponse:
         message = exc.detail if isinstance(exc.detail, str) else "Yêu cầu không hợp lệ."
         return error_response(
             request,
             status_code=exc.status_code,
-            code="HTTP_ERROR",
+            code=_HTTP_ERROR_CODES.get(exc.status_code, "HTTP_ERROR"),
             message=message,
+            headers=dict(exc.headers) if exc.headers else None,
+        )
+
+    @app.exception_handler(Exception)
+    async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
+        # Stack trace goes to the log only; the client never sees SQL or internals.
+        logger.exception("request_id=%s unhandled error", _request_id(request), exc_info=exc)
+        return error_response(
+            request,
+            status_code=500,
+            code="INTERNAL_ERROR",
+            message="Lỗi hệ thống, vui lòng thử lại sau.",
+            # Runs outside RequestIdMiddleware, so the header is added here.
+            headers={"x-request-id": _request_id(request)},
         )
 
     @app.exception_handler(RequestValidationError)

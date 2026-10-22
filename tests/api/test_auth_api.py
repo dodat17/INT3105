@@ -132,7 +132,7 @@ def test_protected_endpoint_rejects_bad_tokens(
 
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
-    assert response.json()["error"]["code"] == "UNAUTHORIZED"
+    assert response.json()["error"]["code"] == "UNAUTHENTICATED"
     assert response.json()["error"]["requestId"] == response.headers["x-request-id"]
 
 
