@@ -215,13 +215,13 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Domain và database
 
-- [x] `N1` Tạo Booking và Ticket entities.
+- [x] `N1` Tạo Booking và BookingItem entities theo mô hình dữ liệu đã chốt.
 - [x] `N1` Tạo BookingStatus enum.
 - [x] `N1` Tạo BookingRepository port.
-- [x] `N1` Tạo ORM models cho bookings và tickets.
+- [x] `N1` Tạo ORM models cho bookings, booking items và inventory ghế.
 - [x] `N1` Tạo migration.
-- [x] `N1` Tạo unique constraint `(showtime_id, seat_id)`.
-- [x] `N1` Implement phương án lưu lịch sử ticket sau khi hủy.
+- [x] `N1` Tạo khóa chính `(showtime_id, seat_id)` cho inventory ghế.
+- [x] `N1` Lưu bất biến lịch sử booking item sau khi hủy.
 
 ### Booking backend
 
@@ -232,33 +232,33 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 - [x] `N1` Kiểm tra suất chiếu chưa bắt đầu.
 - [x] `N1` Kiểm tra ghế còn trống.
 - [x] `N1` Tính giá từng vé và tổng tiền.
-- [x] `N1` Flush để bắt lỗi unique constraint.
-- [x] `N1` Map lỗi database thành `SEAT_UNAVAILABLE`.
+- [x] `N1` Flush booking và booking items trước khi commit transaction.
+- [x] `N1` Map tranh chấp inventory thành `SEAT_UNAVAILABLE`.
 - [x] `N1` Implement danh sách booking của tôi.
 - [x] `N1` Implement chi tiết booking.
 - [x] `N1` Implement hủy booking.
-- [x] `N1` Implement API hỗ trợ ADMIN tra cứu booking.
-- [x] `N1` Áp dụng BR-05 đến BR-12.
+- [x] `N1` Chỉ cho chủ booking tra cứu, xác nhận và hủy theo requirements.md.
+- [x] `N1` Áp dụng BR-01 đến BR-14 liên quan đến booking theo requirements.md hiện hành.
 
 ### Frontend chọn ghế
 
 - [x] `N2` Tạo SeatMap.
-- [ ] `N2` Hiển thị STANDARD, VIP, BOOKED và SELECTED.
+- [x] `N2` Hiển thị STANDARD, VIP, BOOKED và SELECTED.
 - [x] `N2` Không cho chọn ghế BOOKED.
 - [x] `N2` Giới hạn tối đa 8 ghế.
-- [ ] `N2` Hiển thị giá từng ghế.
+- [x] `N2` Hiển thị giá từng ghế.
 - [x] `N2` Hiển thị tổng giá dự kiến.
 - [x] `N2` Tạo BookingSummary.
-- [ ] `N2` Gửi yêu cầu đặt vé.
-- [ ] `N2` Dùng tổng tiền từ server làm kết quả chính thức.
-- [ ] `N2` Xử lý `409 SEAT_UNAVAILABLE`.
-- [ ] `N2` Refresh seat map và bỏ chọn ghế đã bị bán.
+- [x] `N2` Gửi yêu cầu đặt vé.
+- [x] `N2` Dùng tổng tiền từ server làm kết quả chính thức.
+- [x] `N2` Xử lý `409 SEAT_UNAVAILABLE`.
+- [x] `N2` Refresh seat map và bỏ chọn ghế đã bị bán.
 
 ### Frontend vé của tôi
 
 - [x] `N2` Tạo danh sách booking.
-- [ ] `N2` Lọc theo CONFIRMED/CANCELLED.
-- [ ] `N2` Tạo trang chi tiết booking.
+- [x] `N2` Lọc theo CONFIRMED/CANCELLED.
+- [x] `N2` Tạo trang chi tiết booking.
 - [x] `N2` Tạo luồng hủy booking.
 - [x] `N2` Hiển thị đúng lịch sử ghế sau khi hủy.
 
@@ -271,20 +271,20 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 - [x] `N1` Test người khác xem/hủy booking.
 - [x] `N1` Test ghế đã bán trả 409.
 - [x] `N1` Test hủy vé rồi đặt lại được ghế.
-- [ ] `N1` Integration test bằng PostgreSQL thật.
+- [x] `N1` Integration test bằng PostgreSQL thật.
 - [ ] `N2` Test chọn ghế bằng chuột và bàn phím.
 - [ ] `N2` Test xử lý 409.
 - [ ] `N3` E2E đặt vé hoàn chỉnh.
 - [ ] `N3` E2E hủy vé.
-- [ ] `N3` Race test hai user đặt cùng ghế.
-- [ ] `N3` Xác nhận database không có ghế bị bán hai lần.
+- [x] `N3` Race test hai user đặt cùng ghế.
+- [x] `N3` Xác nhận database không có ghế bị bán hai lần.
 
 **Nghiệm thu Mốc D**
 
 - [ ] `ALL` CUSTOMER đặt được 1–8 ghế.
 - [ ] `ALL` Chỉ một request thắng khi hai người đặt cùng ghế.
 - [ ] `ALL` Booking xuất hiện trong “Vé của tôi”.
-- [ ] `ALL` Chỉ chủ booking hoặc ADMIN xem/hủy được.
+- [ ] `ALL` Chỉ chủ booking xem, xác nhận hoặc hủy được.
 - [ ] `ALL` Ghế được trả lại đúng sau khi hủy.
 - [ ] `ALL` Booking đã hủy vẫn giữ đủ thông tin lịch sử theo thiết kế đã chốt.
 
@@ -294,18 +294,18 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 - [x] `N2` Hoàn thiện design system.
 - [x] `N2` Hoàn thiện responsive từ 360 px.
-- [ ] `N2` Hoàn thiện loading state.
-- [ ] `N2` Hoàn thiện empty state.
-- [ ] `N2` Hoàn thiện error state.
-- [ ] `N2` Hoàn thiện success feedback.
+- [x] `N2` Hoàn thiện loading state.
+- [x] `N2` Hoàn thiện empty state.
+- [x] `N2` Hoàn thiện error state.
+- [x] `N2` Hoàn thiện success feedback.
 - [x] `N2` Hiển thị tiền theo định dạng `vi-VN`.
-- [ ] `N2` Hiển thị thời gian theo múi giờ đã chốt.
-- [ ] `N2` Kiểm tra focus và điều hướng bàn phím.
+- [x] `N2` Hiển thị thời gian theo múi giờ đã chốt.
+- [x] `N2` Kiểm tra focus và điều hướng bàn phím.
 - [x] `N2` Thêm text thay thế cho trạng thái ghế.
 - [x] `N2` Không dùng màu làm tín hiệu duy nhất.
-- [ ] `N2` Cấu hình CSP phù hợp.
-- [ ] `N2` Kiểm tra không chèn HTML không tin cậy.
-- [ ] `N2` Tối ưu kích thước bundle.
+- [x] `N2` Cấu hình CSP phù hợp.
+- [x] `N2` Kiểm tra không chèn HTML không tin cậy.
+- [x] `N2` Tối ưu kích thước bundle.
 
 **Nghiệm thu Frontend**
 
@@ -320,22 +320,22 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Docker
 
-- [ ] `N3` Tạo Dockerfile multi-stage.
-- [ ] `N3` Build frontend trong stage riêng.
-- [ ] `N3` Cài backend dependency trong stage riêng.
-- [ ] `N3` Tạo runtime image gọn.
-- [ ] `N3` Chạy container bằng user không phải root.
-- [ ] `N3` Tạo Docker Compose cho app và PostgreSQL.
-- [ ] `N3` Thêm healthcheck cho app và database.
-- [ ] `N3` Gắn volume cho PostgreSQL.
+- [x] `N3` Tạo Dockerfile multi-stage.
+- [x] `N3` Build frontend trong stage riêng.
+- [x] `N3` Cài backend dependency trong stage riêng.
+- [x] `N3` Tạo runtime image gọn.
+- [x] `N3` Chạy container bằng user không phải root.
+- [x] `N3` Tạo Docker Compose cho app và PostgreSQL.
+- [x] `N3` Thêm healthcheck cho app và database.
+- [x] `N3` Gắn volume cho PostgreSQL.
 
 ### Migration và seed
 
-- [ ] `N1` Cấu hình Alembic.
-- [ ] `N1` Tạo migration đầy đủ từ database trống.
+- [x] `N1` Cấu hình Alembic.
+- [x] `N1` Tạo migration đầy đủ từ database trống.
 - [ ] `N1` Kiểm tra nâng cấp từ phiên bản trước.
-- [ ] `N3` Chạy migration tự động trong pipeline phù hợp.
-- [ ] `N3` Chạy seed bằng lệnh riêng, không chạy tự động trên production.
+- [x] `N3` Chạy migration tự động trong pipeline phù hợp.
+- [x] `N3` Chạy seed bằng lệnh riêng, không chạy tự động trên production.
 
 ### CI
 
@@ -357,8 +357,8 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 - [ ] `N3` Route mới mặc định bị AuthMiddleware bảo vệ.
 - [ ] `N3` Public route list đã được review.
 - [ ] `N3` CORS chỉ cho origin hợp lệ.
-- [ ] `N3` Bật security headers.
-- [ ] `N3` Bật CSP cho frontend.
+- [x] `N3` Bật security headers.
+- [x] `N3` Bật CSP cho frontend.
 - [ ] `N3` Lỗi production không lộ stack trace.
 - [ ] `N3` Kiểm tra CUSTOMER không gọi được API ADMIN.
 
@@ -427,7 +427,7 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 - [ ] `ALL` README có mô hình dữ liệu.
 - [ ] `ALL` README có bảng endpoint.
 - [ ] `ALL` README hướng dẫn xác thực JWT.
-- [ ] `ALL` README hướng dẫn chạy bằng Docker.
+- [x] `ALL` README hướng dẫn chạy bằng Docker.
 - [ ] `ALL` README hướng dẫn chạy test.
 - [ ] `ALL` README có kết quả kiểm thử tải.
 - [ ] `ALL` OpenAPI khớp với implementation.
@@ -451,10 +451,10 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 - [ ] Frontend test đạt.
 - [ ] End-to-end test đạt.
 - [ ] Import-linter đạt.
-- [ ] Docker image build thành công.
-- [ ] Docker Compose chạy thành công.
-- [ ] Migration chạy được trên database trống.
-- [ ] Seed tạo được dữ liệu demo.
+- [x] Docker image build thành công.
+- [x] Docker Compose chạy thành công.
+- [x] Migration chạy được trên database trống.
+- [x] Seed tạo được dữ liệu demo.
 - [ ] Swagger hoạt động.
 - [ ] Frontend hoạt động trên mobile và desktop.
 - [ ] Không có ghế bị bán trùng.

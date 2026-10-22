@@ -44,7 +44,7 @@ export function HomePage() {
         </form>
       </div>
 
-      {moviesLoading ? <LoadingState /> : moviesError ? <ErrorState message={moviesError} /> :
+      {moviesLoading ? <LoadingState /> : moviesError ? <ErrorState message={moviesError} onRetry={() => void loadMovies(activeQuery, movies.page)} /> :
         movies.items.length ? (
           <>
             <div className="movie-grid">

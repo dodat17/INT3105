@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 
 import type { AppContext } from '../app/AppShell';
+import { cinemaDateTime, cinemaTime, currency } from '../lib/formatters';
 import { bookingApi, ApiError, showtimeApi } from '../lib/apiClient';
 import type { Booking, SeatMap, Showtime } from '../types';
 import { BookingSummary } from './BookingSummary';
@@ -9,9 +10,6 @@ import { EmptyState, ErrorState, LoadingState } from './AsyncStates';
 import { SeatMapView } from './SeatMapView';
 
 type MovieShowtimesProps = { movieId: string };
-const dateTime = new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-const time = new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' });
-const currency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 
 export function MovieShowtimes({ movieId }: MovieShowtimesProps) {
   const { authenticated, user } = useOutletContext<AppContext>();
@@ -66,7 +64,7 @@ export function MovieShowtimes({ movieId }: MovieShowtimesProps) {
       {loading ? <LoadingState /> : error && !selectedId ? <ErrorState message={error} /> : showtimes.length ? (
         <div className="showtime-cards">{showtimes.map((showtime) => (
           <button className={`showtime-card ${selectedId === showtime.id ? 'active' : ''}`} disabled={!showtime.isOpenForBooking} key={showtime.id} type="button" onClick={() => void viewSeats(showtime.id)}>
-            <strong>{dateTime.format(new Date(showtime.startsAt))}</strong><span>Đến {time.format(new Date(showtime.endsAt))}</span><small>Từ {currency.format(showtime.basePrice)}</small>
+            <strong>{cinemaDateTime.format(new Date(showtime.startsAt))}</strong><span>Đến {cinemaTime.format(new Date(showtime.endsAt))}</span><small>Từ {currency.format(showtime.basePrice)}</small>
           </button>
         ))}</div>
       ) : <EmptyState title="Chưa có suất chiếu" message="Thử chọn ngày khác." />}
@@ -76,7 +74,7 @@ export function MovieShowtimes({ movieId }: MovieShowtimesProps) {
           {user?.role === 'CUSTOMER' ? <BookingSummary seats={selected} submitting={submitting} onSubmit={() => void createBooking()} /> : <p><Link to="/login">Đăng nhập tài khoản khách hàng</Link> để giữ ghế.</p>}
         </>}
         {error && <ErrorState message={error} />}
-        {booking && <div className="booking-success" role="status"><strong>Đã giữ {booking.items.map((item) => item.label).join(', ')}</strong><span>Tổng chính thức: {currency.format(booking.totalAmount)}</span><span>Hết hạn lúc {time.format(new Date(booking.expiresAt))}</span><Link to={`/tickets/${booking.id}`}>Xem booking</Link></div>}
+        {booking && <div className="booking-success" role="status"><strong>Đã giữ {booking.items.map((item) => item.label).join(', ')}</strong><span>Tổng chính thức: {currency.format(booking.totalAmount)}</span><span>Hết hạn lúc {cinemaTime.format(new Date(booking.expiresAt))}</span><Link to={`/tickets/${booking.id}`}>Xem booking</Link></div>}
       </div>}
     </div>
   );

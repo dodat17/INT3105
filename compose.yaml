@@ -1,0 +1,95 @@
+name: movie-booking
+
+x-app-environment: &app-environment
+  APP_ENV: development
+  APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
+  DATABASE_URL: postgresql+psycopg://movie_booking:${POSTGRES_PASSWORD:-movie_booking}@db:5432/movie_booking
+  JWT_SECRET: ${JWT_SECRET:-docker-development-secret-change-me-123456}
+  JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+  JWT_TTL_SECONDS: ${JWT_TTL_SECONDS:-3600}
+  BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+  HOLD_TTL_SECONDS: ${HOLD_TTL_SECONDS:-300}
+  MAX_HOLDS_PER_SHOWTIME: ${MAX_HOLDS_PER_SHOWTIME:-2}
+  MAX_ACTIVE_HOLDS: ${MAX_ACTIVE_HOLDS:-5}
+  DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+  CINEMA_TIMEZONE: ${CINEMA_TIMEZONE:-Asia/Ho_Chi_Minh}
+
+x-app-service: &app-service
+  image: movie-booking-app:local
+  build:
+    context: .
+    target: runtime
+  environment: *app-environment
+  init: true
+  restart: "no"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: movie_booking
+      POSTGRES_USER: movie_booking
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-movie_booking}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U movie_booking -d movie_booking"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  migrate:
+    <<: *app-service
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  seed:
+    <<: *app-service
+    command: ["python", "-m", "scripts.seed"]
+    environment:
+      <<: *app-environment
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.test}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin12345}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    profiles: ["tools"]
+
+  app:
+    <<: *app-service
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --workers
+      - ${WEB_WORKERS:-1}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3)
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
