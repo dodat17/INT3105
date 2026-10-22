@@ -1,15 +1,14 @@
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.domain.errors import (
     BookingExpiredError,
+    BookingValidationError,
     BusinessRuleViolation,
     DomainError,
-    DomainValidationError,
     EmailAlreadyUsedError,
     ForbiddenError,
     HoldLimitExceededError,
@@ -27,9 +26,10 @@ UNAUTHORIZED = (401, "UNAUTHORIZED", "Yêu cầu đăng nhập.")
 
 # status, code, default message
 _DOMAIN_ERRORS: dict[type[DomainError], tuple[int, str, str]] = {
-    NotFoundError: (404, "NOT_FOUND", "Không tìm thấy tài nguyên."),
+    NotFoundError: (404, "RESOURCE_NOT_FOUND", "Không tìm thấy tài nguyên."),
     ForbiddenError: (403, "FORBIDDEN", "Bạn không có quyền thực hiện thao tác này."),
     BusinessRuleViolation: (400, "BUSINESS_RULE_VIOLATION", "Vi phạm quy tắc nghiệp vụ."),
+    BookingValidationError: (400, "VALIDATION_ERROR", "Dữ liệu yêu cầu không hợp lệ."),
     EmailAlreadyUsedError: (409, "EMAIL_ALREADY_USED", "Email đã được sử dụng."),
     InvalidCredentialsError: (401, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng."),
     InvalidTokenError: UNAUTHORIZED,
@@ -39,24 +39,11 @@ _DOMAIN_ERRORS: dict[type[DomainError], tuple[int, str, str]] = {
         "SHOWTIME_OVERLAP",
         "Suất chiếu bị trùng giờ với một suất khác trong cùng phòng.",
     ),
-    DomainValidationError: (400, "VALIDATION_ERROR", "Dữ liệu yêu cầu không hợp lệ."),
     SeatUnavailableError: (409, "SEAT_UNAVAILABLE", "Một hoặc nhiều ghế không còn trống."),
-    BookingExpiredError: (409, "BOOKING_EXPIRED", "Booking đã hết thời gian giữ ghế."),
-    InvalidBookingStateError: (
-        409,
-        "INVALID_BOOKING_STATE",
-        "Trạng thái booking không cho phép thao tác này.",
-    ),
-    ShowtimeNotBookableError: (
-        409,
-        "SHOWTIME_NOT_BOOKABLE",
-        "Suất chiếu không còn nhận đặt vé.",
-    ),
-    HoldLimitExceededError: (
-        409,
-        "HOLD_LIMIT_EXCEEDED",
-        "Đã vượt giới hạn booking đang giữ.",
-    ),
+    BookingExpiredError: (409, "BOOKING_EXPIRED", "Booking đã hết hạn."),
+    InvalidBookingStateError: (409, "INVALID_BOOKING_STATE", "Trạng thái booking không hợp lệ."),
+    ShowtimeNotBookableError: (409, "SHOWTIME_NOT_BOOKABLE", "Suất chiếu không còn nhận đặt chỗ."),
+    HoldLimitExceededError: (409, "HOLD_LIMIT_EXCEEDED", "Đã vượt giới hạn booking đang giữ."),
 }
 
 
@@ -87,11 +74,11 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(DomainError)
     async def handle_domain_error(request: Request, exc: DomainError) -> JSONResponse:
         status_code, code, default_message = _DOMAIN_ERRORS[type(exc)]
-        details = (
-            {"seatIds": exc.seat_ids}
-            if isinstance(exc, SeatUnavailableError) and exc.seat_ids
-            else None
-        )
+        details = None
+        if isinstance(exc, BookingValidationError):
+            details = {"fields": sorted(exc.fields)}
+        elif isinstance(exc, SeatUnavailableError) and exc.seat_ids:
+            details = {"seatIds": sorted(exc.seat_ids)}
         return error_response(
             request,
             status_code=status_code,
@@ -114,10 +101,15 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def handle_validation_error(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
+        fields = {
+            str(error["loc"][1])
+            for error in exc.errors()
+            if len(error.get("loc", ())) > 1 and error["loc"][0] in {"body", "path", "query"}
+        }
         return error_response(
             request,
             status_code=400,
             code="VALIDATION_ERROR",
             message="Dữ liệu yêu cầu không hợp lệ.",
-            details=jsonable_encoder(exc.errors()),
+            details={"fields": sorted(fields)},
         )

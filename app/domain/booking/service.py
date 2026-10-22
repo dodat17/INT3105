@@ -1,13 +1,21 @@
-from dataclasses import replace
 from datetime import timedelta
 from secrets import token_hex
 from uuid import UUID, uuid4
 
 from app.domain.auth.model import Actor, Role
-from app.domain.booking.model import Booking, BookingDetail, BookingStatus, Ticket
+from app.domain.booking.model import (
+    Booking,
+    BookingDetails,
+    BookingItem,
+    BookingStatus,
+    InventoryState,
+    effective_status,
+    validate_seat_ids,
+)
 from app.domain.errors import (
     BookingExpiredError,
-    DomainValidationError,
+    BookingValidationError,
+    ForbiddenError,
     HoldLimitExceededError,
     InvalidBookingStateError,
     NotFoundError,
@@ -17,106 +25,119 @@ from app.domain.errors import (
 from app.domain.ports import Page, UnitOfWorkFactory
 from app.domain.scheduling.model import seat_price
 
-MIN_SEATS = 1
-MAX_SEATS = 8
-
 
 class BookingService:
     def __init__(
         self,
         uow_factory: UnitOfWorkFactory,
         hold_ttl_seconds: int,
-        max_active_per_showtime: int,
-        max_active_total: int,
+        max_holds_per_showtime: int,
+        max_active_holds: int,
     ) -> None:
         self._uow_factory = uow_factory
         self._hold_ttl = timedelta(seconds=hold_ttl_seconds)
-        self._max_active_per_showtime = max_active_per_showtime
-        self._max_active_total = max_active_total
+        self._max_per_showtime = max_holds_per_showtime
+        self._max_active = max_active_holds
 
-    def create_booking(self, actor: Actor, showtime_id: UUID, seat_ids: list[UUID]) -> Booking:
-        self._validate_seat_ids(seat_ids)
-        sorted_seat_ids = sorted(seat_ids, key=str)
+    @staticmethod
+    def _customer(actor: Actor) -> None:
+        if actor.role is not Role.CUSTOMER:
+            raise ForbiddenError
+
+    @staticmethod
+    def _owned(booking: Booking | None, actor: Actor) -> Booking:
+        if booking is None or booking.user_id != actor.user_id:
+            raise NotFoundError
+        return booking
+
+    def create(self, actor: Actor, showtime_id: UUID, seat_ids: list[UUID]) -> Booking:
+        self._customer(actor)
+        validate_seat_ids(seat_ids)
+        ordered_ids = sorted(seat_ids)
         with self._uow_factory() as uow:
-            if uow.users.lock(actor.user_id) is None:
-                raise NotFoundError
             showtime = uow.showtimes.get(showtime_id)
             if showtime is None:
                 raise NotFoundError
-            seats = {seat.id: seat for seat in uow.rooms.seats(showtime.room_id)}
-            if any(seat_id not in seats for seat_id in sorted_seat_ids):
-                raise DomainValidationError("Ghế không tồn tại hoặc không thuộc phòng chiếu.")
-            if uow.bookings.lock_inventory(showtime_id, sorted_seat_ids) != len(sorted_seat_ids):
-                raise DomainValidationError("Ghế không tồn tại hoặc không thuộc suất chiếu.")
+            if uow.users.lock(actor.user_id) is None:
+                raise NotFoundError
+            inventory = uow.inventory.lock(showtime_id, ordered_ids)
             now = uow.clock.now()
-            if now >= showtime.starts_at:
+            if not showtime.is_open_for_booking or now >= showtime.starts_at:
                 raise ShowtimeNotBookableError
-            per_showtime, total = uow.bookings.count_active_holds(actor.user_id, showtime_id, now)
-            if per_showtime >= self._max_active_per_showtime or total >= self._max_active_total:
-                raise HoldLimitExceededError
-
-            booking_id = uuid4()
-            tickets = tuple(
-                Ticket(
-                    id=uuid4(),
-                    booking_id=booking_id,
-                    seat_id=seat_id,
-                    unit_price=seat_price(showtime.base_price, seats[seat_id].seat_type),
+            if len(inventory) != len(ordered_ids):
+                raise BookingValidationError(
+                    "Ghế không tồn tại hoặc không thuộc phòng của suất chiếu.",
+                    "seatIds",
                 )
-                for seat_id in sorted_seat_ids
-            )
-            expires_at = min(now + self._hold_ttl, showtime.starts_at)
-            booking = Booking(
-                id=booking_id,
-                user_id=actor.user_id,
-                showtime_id=showtime_id,
-                status=BookingStatus.HELD,
-                tickets=tickets,
-                total_amount=sum(ticket.unit_price for ticket in tickets),
-                created_at=now,
-                expires_at=expires_at,
-            )
-            uow.bookings.add(booking)
-            uow.bookings.flush()
-            unavailable = uow.bookings.acquire_holds(
-                showtime_id,
-                sorted_seat_ids,
-                booking_id,
-                expires_at,
-                now,
+            if (
+                uow.bookings.count_effective_holds(actor.user_id, now, showtime_id)
+                >= self._max_per_showtime
+            ):
+                raise HoldLimitExceededError
+            if uow.bookings.count_effective_holds(actor.user_id, now) >= self._max_active:
+                raise HoldLimitExceededError
+            unavailable = sorted(
+                row.seat.id
+                for row in inventory
+                if row.state is InventoryState.BOOKED
+                or (
+                    row.state is InventoryState.HELD
+                    and row.hold_expires_at is not None
+                    and row.hold_expires_at > now
+                )
             )
             if unavailable:
-                raise SeatUnavailableError([str(seat_id) for seat_id in unavailable])
+                raise SeatUnavailableError(unavailable)
+            expires_at = min(now + self._hold_ttl, showtime.starts_at)
+            items = [
+                BookingItem(
+                    row.seat.id,
+                    row.seat.row_label,
+                    row.seat.number,
+                    row.seat.seat_type,
+                    seat_price(showtime.base_price, row.seat.seat_type),
+                )
+                for row in inventory
+            ]
+            booking = Booking(
+                uuid4(),
+                actor.user_id,
+                showtime_id,
+                BookingStatus.HELD,
+                now,
+                expires_at,
+                sum(item.unit_price for item in items),
+                items,
+            )
+            uow.bookings.add(booking)
+            if not uow.inventory.acquire(showtime_id, ordered_ids, booking.id, expires_at, now):
+                conflicting = [
+                    row.seat.id
+                    for row in uow.inventory.lock(showtime_id, ordered_ids)
+                    if row.booking_id != booking.id
+                    and (
+                        row.state is InventoryState.BOOKED
+                        or (
+                            row.state is InventoryState.HELD
+                            and row.hold_expires_at is not None
+                            and row.hold_expires_at > now
+                        )
+                    )
+                ]
+                raise SeatUnavailableError(conflicting)
             uow.commit()
             return booking
 
-    def list_my_bookings(
-        self,
-        actor: Actor,
-        status: BookingStatus | None,
-        page: int,
-        page_size: int,
-    ) -> Page[Booking]:
+    def get(self, actor: Actor, booking_id: UUID) -> Booking:
         with self._uow_factory() as uow:
+            booking = self._owned(uow.bookings.get(booking_id), actor)
             now = uow.clock.now()
-            return uow.bookings.search(
-                actor.user_id,
-                status.value if status is not None else None,
-                now,
-                page,
-                page_size,
-            )
+        status = effective_status(booking.status, booking.expires_at, now)
+        return booking if status is booking.status else booking.with_status(status)
 
-    def get_booking(self, actor: Actor, booking_id: UUID) -> Booking:
+    def details(self, actor: Actor, booking_id: UUID) -> BookingDetails:
+        booking = self.get(actor, booking_id)
         with self._uow_factory() as uow:
-            booking = self._require_access(uow.bookings.get(booking_id), actor, allow_admin=True)
-            now = uow.clock.now()
-            return replace(booking, status=booking.effective_status(now))
-
-    def get_booking_detail(self, actor: Actor, booking_id: UUID) -> BookingDetail:
-        with self._uow_factory() as uow:
-            booking = self._require_access(uow.bookings.get(booking_id), actor, allow_admin=True)
-            booking = replace(booking, status=booking.effective_status(uow.clock.now()))
             showtime = uow.showtimes.get(booking.showtime_id)
             if showtime is None:
                 raise NotFoundError
@@ -124,69 +145,45 @@ class BookingService:
             room = uow.rooms.get(showtime.room_id)
             if movie is None or room is None:
                 raise NotFoundError
-            seats_by_id = {seat.id: seat for seat in uow.rooms.seats(room.id)}
-            try:
-                seats = tuple(seats_by_id[ticket.seat_id] for ticket in booking.tickets)
-            except KeyError as exc:
-                raise NotFoundError from exc
-            return BookingDetail(booking, movie, showtime, room, seats)
+        return BookingDetails(booking=booking, movie=movie, room=room, showtime=showtime)
 
-    def confirm_booking(self, actor: Actor, booking_id: UUID) -> Booking:
+    def list(
+        self, actor: Actor, status: BookingStatus | None, page: int, page_size: int
+    ) -> Page[Booking]:
+        self._customer(actor)
         with self._uow_factory() as uow:
-            booking = self._require_access(
-                uow.bookings.get_for_update(booking_id), actor, allow_admin=False
-            )
+            now = uow.clock.now()
+            return uow.bookings.list_for_user(actor.user_id, status, now, page, page_size)
+
+    def confirm(self, actor: Actor, booking_id: UUID) -> Booking:
+        with self._uow_factory() as uow:
+            booking = self._owned(uow.bookings.get(booking_id, lock=True), actor)
             now = uow.clock.now()
             if booking.status is BookingStatus.CONFIRMED:
                 return booking
-            if booking.status is BookingStatus.CANCELLED:
+            if booking.status is not BookingStatus.HELD:
                 raise InvalidBookingStateError
-            if booking.status is BookingStatus.EXPIRED or now >= booking.expires_at:
+            if now >= booking.expires_at:
                 raise BookingExpiredError
             showtime = uow.showtimes.get(booking.showtime_id)
-            if showtime is None:
-                raise NotFoundError
-            if now >= showtime.starts_at:
+            if showtime is None or not showtime.is_open_for_booking or now >= showtime.starts_at:
                 raise ShowtimeNotBookableError
-            if uow.bookings.mark_booked(booking.id, now) != len(booking.tickets):
-                raise SeatUnavailableError([str(ticket.seat_id) for ticket in booking.tickets])
-            booking_code = token_hex(6).upper()
-            uow.bookings.confirm(booking.id, now, booking_code)
+            if uow.inventory.mark_booked(booking.id, now) != len(booking.items):
+                raise SeatUnavailableError([item.seat_id for item in booking.items])
+            confirmed = booking.confirm(now, token_hex(4).upper())
+            uow.bookings.update(confirmed)
             uow.commit()
-            return replace(
-                booking,
-                status=BookingStatus.CONFIRMED,
-                confirmed_at=now,
-                booking_code=booking_code,
-            )
+            return confirmed
 
-    def cancel_booking(self, actor: Actor, booking_id: UUID) -> None:
+    def cancel(self, actor: Actor, booking_id: UUID) -> None:
         with self._uow_factory() as uow:
-            booking = self._require_access(
-                uow.bookings.get_for_update(booking_id), actor, allow_admin=True
-            )
+            booking = self._owned(uow.bookings.get(booking_id, lock=True), actor)
             now = uow.clock.now()
             if booking.status is BookingStatus.CONFIRMED:
                 raise InvalidBookingStateError
-            if booking.status in {BookingStatus.CANCELLED, BookingStatus.EXPIRED}:
+            if booking.status is BookingStatus.CANCELLED:
                 return
-            if now >= booking.expires_at:
-                return
-            uow.bookings.release_holds(booking.id)
-            uow.bookings.cancel(booking.id, now)
+            uow.inventory.release(booking.id)
+            if now < booking.expires_at:
+                uow.bookings.update(booking.cancel(now))
             uow.commit()
-
-    @staticmethod
-    def _validate_seat_ids(seat_ids: list[UUID]) -> None:
-        if not MIN_SEATS <= len(seat_ids) <= MAX_SEATS:
-            raise DomainValidationError("Mỗi booking phải có từ 1 đến 8 ghế.")
-        if len(set(seat_ids)) != len(seat_ids):
-            raise DomainValidationError("Danh sách ghế không được trùng lặp.")
-
-    @staticmethod
-    def _require_access(booking: Booking | None, actor: Actor, *, allow_admin: bool) -> Booking:
-        if booking is None or (
-            booking.user_id != actor.user_id and not (allow_admin and actor.role is Role.ADMIN)
-        ):
-            raise NotFoundError
-        return booking

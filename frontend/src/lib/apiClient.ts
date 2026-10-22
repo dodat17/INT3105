@@ -1,4 +1,7 @@
 import type {
+  Booking,
+  BookingPage,
+  BookingStatus,
   LoginPayload,
   Movie,
   MoviePage,
@@ -115,5 +118,30 @@ export const showtimeApi = {
     apiRequest<void>(`/showtimes/${showtimeId}`, {
       method: 'DELETE',
       headers: authorization(token),
+    }),
+};
+
+
+export const bookingApi = {
+  create: (token: string, showtimeId: string, seatIds: string[]) =>
+    apiRequest<Booking>('/bookings', {
+      method: 'POST',
+      headers: authorization(token),
+      body: JSON.stringify({ showtimeId, seatIds }),
+    }),
+  list: (token: string, status?: BookingStatus) => {
+    const search = new URLSearchParams({ page: '1', pageSize: '100' });
+    if (status) search.set('status', status);
+    return apiRequest<BookingPage>(`/me/bookings?${search}`, { headers: authorization(token) });
+  },
+  get: (token: string, bookingId: string) =>
+    apiRequest<Booking>(`/bookings/${bookingId}`, { headers: authorization(token) }),
+  confirm: (token: string, bookingId: string) =>
+    apiRequest<Booking>(`/bookings/${bookingId}/confirm`, {
+      method: 'POST', headers: authorization(token),
+    }),
+  cancel: (token: string, bookingId: string) =>
+    apiRequest<void>(`/bookings/${bookingId}`, {
+      method: 'DELETE', headers: authorization(token),
     }),
 };
