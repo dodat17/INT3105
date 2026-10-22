@@ -23,6 +23,7 @@ from app.domain.cinema.service import RoomService
 from app.domain.ports import UnitOfWorkFactory
 from app.domain.scheduling.service import ShowtimeService
 from app.infrastructure.clock import SystemClock
+from app.infrastructure.persistence.readiness import DatabaseReadiness
 from app.infrastructure.persistence.uow import SqlAlchemyUnitOfWork, create_session_factory
 from app.infrastructure.security.passwords import BcryptPasswordHasher
 from app.infrastructure.security.tokens import JwtTokenService
@@ -53,6 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     tokens = JwtTokenService(settings.jwt_secret, settings.jwt_algorithm, settings.jwt_ttl_seconds)
 
     app = FastAPI(title=settings.app_name, version="0.1.0")
+    app.state.readiness = DatabaseReadiness(session_factory)
     app.state.auth_service = AuthService(
         uow_factory, BcryptPasswordHasher(settings.bcrypt_rounds), tokens, SystemClock()
     )
@@ -72,8 +74,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_exception_handlers(app)
     app.include_router(root_router)
 
+    # Unknown API and health paths answer with a JSON 404, never the SPA's index.html.
     @app.api_route(
         "/api/{path:path}",
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        include_in_schema=False,
+    )
+    @app.api_route(
+        "/health/{path:path}",
         methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         include_in_schema=False,
     )
