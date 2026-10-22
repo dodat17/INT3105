@@ -42,9 +42,7 @@ class SecurityHeadersMiddleware:
             return
 
         content_security_policy = (
-            DOCS_CONTENT_SECURITY_POLICY
-            if scope["path"] in DOCS_PATHS
-            else CONTENT_SECURITY_POLICY
+            DOCS_CONTENT_SECURITY_POLICY if scope["path"] in DOCS_PATHS else CONTENT_SECURITY_POLICY
         )
 
         async def send_with_security_headers(message: Message) -> None:
