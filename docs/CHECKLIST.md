@@ -320,22 +320,22 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 
 ### Docker
 
-- [ ] `N3` Tạo Dockerfile multi-stage.
-- [ ] `N3` Build frontend trong stage riêng.
-- [ ] `N3` Cài backend dependency trong stage riêng.
-- [ ] `N3` Tạo runtime image gọn.
-- [ ] `N3` Chạy container bằng user không phải root.
-- [ ] `N3` Tạo Docker Compose cho app và PostgreSQL.
-- [ ] `N3` Thêm healthcheck cho app và database.
-- [ ] `N3` Gắn volume cho PostgreSQL.
+- [x] `N3` Tạo Dockerfile multi-stage.
+- [x] `N3` Build frontend trong stage riêng.
+- [x] `N3` Cài backend dependency trong stage riêng.
+- [x] `N3` Tạo runtime image gọn.
+- [x] `N3` Chạy container bằng user không phải root.
+- [x] `N3` Tạo Docker Compose cho app và PostgreSQL.
+- [x] `N3` Thêm healthcheck cho app và database.
+- [x] `N3` Gắn volume cho PostgreSQL.
 
 ### Migration và seed
 
-- [ ] `N1` Cấu hình Alembic.
-- [ ] `N1` Tạo migration đầy đủ từ database trống.
+- [x] `N1` Cấu hình Alembic.
+- [x] `N1` Tạo migration đầy đủ từ database trống.
 - [ ] `N1` Kiểm tra nâng cấp từ phiên bản trước.
-- [ ] `N3` Chạy migration tự động trong pipeline phù hợp.
-- [ ] `N3` Chạy seed bằng lệnh riêng, không chạy tự động trên production.
+- [x] `N3` Chạy migration tự động trong pipeline phù hợp.
+- [x] `N3` Chạy seed bằng lệnh riêng, không chạy tự động trên production.
 
 ### CI
 
@@ -427,7 +427,7 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 - [ ] `ALL` README có mô hình dữ liệu.
 - [ ] `ALL` README có bảng endpoint.
 - [ ] `ALL` README hướng dẫn xác thực JWT.
-- [ ] `ALL` README hướng dẫn chạy bằng Docker.
+- [x] `ALL` README hướng dẫn chạy bằng Docker.
 - [ ] `ALL` README hướng dẫn chạy test.
 - [ ] `ALL` README có kết quả kiểm thử tải.
 - [ ] `ALL` OpenAPI khớp với implementation.
@@ -451,10 +451,10 @@ Checklist này là nơi cả nhóm đánh dấu tiến độ triển khai hệ t
 - [ ] Frontend test đạt.
 - [ ] End-to-end test đạt.
 - [ ] Import-linter đạt.
-- [ ] Docker image build thành công.
-- [ ] Docker Compose chạy thành công.
-- [ ] Migration chạy được trên database trống.
-- [ ] Seed tạo được dữ liệu demo.
+- [x] Docker image build thành công.
+- [x] Docker Compose chạy thành công.
+- [x] Migration chạy được trên database trống.
+- [x] Seed tạo được dữ liệu demo.
 - [ ] Swagger hoạt động.
 - [ ] Frontend hoạt động trên mobile và desktop.
 - [ ] Không có ghế bị bán trùng.
