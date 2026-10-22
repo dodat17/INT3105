@@ -17,6 +17,7 @@
   .account-actions span { display: none; }
   .account-actions .button { min-height: 2.35rem; padding: 0.5rem 0.7rem; font-size: 0.75rem; }
   .catalog-toolbar, .page-heading { align-items: start; flex-direction: column; }
+  .booking-success { align-items: flex-start; flex-direction: column; }
   .ticket-card { grid-template-columns: 1fr; gap: 0; }
   .ticket-main { padding: 1.25rem; }
   .ticket-card > button { margin: 0 1.25rem 1.25rem; justify-self: start; }

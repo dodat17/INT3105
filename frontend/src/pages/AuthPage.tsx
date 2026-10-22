@@ -10,6 +10,7 @@ type AuthPageProps = {
 type LocationState = {
   from?: string;
   email?: string;
+  registered?: boolean;
 };
 
 export function AuthPage({ mode }: AuthPageProps) {
@@ -32,7 +33,7 @@ export function AuthPage({ mode }: AuthPageProps) {
     try {
       if (mode === 'register') {
         await register({ email, password, fullName: String(form.get('fullName') ?? '').trim() });
-        navigate('/login', { replace: true, state: { email } });
+        navigate('/login', { replace: true, state: { email, registered: true } });
       } else {
         const currentUser = await login({ email, password });
         const destination = currentUser.role === 'ADMIN' ? '/admin' : state?.from ?? '/';
@@ -51,6 +52,7 @@ export function AuthPage({ mode }: AuthPageProps) {
       <form className="auth-card" onSubmit={submit}>
         <p className="section-index">TÀI KHOẢN</p>
         <h1>{isRegister ? 'Đăng ký' : 'Đăng nhập'}</h1>
+        {!isRegister && state?.registered && <p className="form-notice success" role="status">Đăng ký thành công. Hãy đăng nhập để tiếp tục.</p>}
         {isRegister && <label>Họ và tên<input autoComplete="name" name="fullName" required /></label>}
         <label>Email<input autoComplete="email" defaultValue={state?.email} name="email" type="email" required /></label>
         <label>Mật khẩu<input autoComplete={isRegister ? 'new-password' : 'current-password'} minLength={8} name="password" type="password" required /></label>

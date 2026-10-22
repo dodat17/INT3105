@@ -109,6 +109,7 @@
 .form-notice { margin-top: 1rem; color: var(--color-muted); font-size: 0.75rem; line-height: 1.5; }
 
 .form-notice.error { color: #b62e2a; }
+.form-notice.success { color: #217346; }
 
 .auth-page {
   display: grid;
@@ -187,6 +188,9 @@
 .legend-dot.selected { background: var(--color-accent-dark); border-color: var(--color-accent-dark); }
 .seat-map-section .booking-summary { display: grid; gap: 1rem; margin-top: 1.5rem; padding: 1.5rem; border: 1px solid var(--color-line); border-radius: var(--radius-large); }
 .seat-map-section .booking-summary > div { display: flex; justify-content: space-between; gap: 1rem; }
+.seat-price-list { display: grid; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+.seat-price-list li { display: flex; justify-content: space-between; gap: 1rem; color: var(--color-muted); font-size: 0.78rem; }
+.seat-price-list strong { color: var(--color-ink); }
 .booking-success { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; padding: 1rem; background: #e7f6ee; border-radius: var(--radius-medium); }
 .tickets-page, .ticket-detail { width: min(72rem, calc(100% - 2.5rem)); margin: 0 auto; padding: 3rem 0; }
 .ticket-card { grid-template-columns: 1fr auto; padding: 1.25rem; }

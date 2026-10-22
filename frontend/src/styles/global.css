@@ -19,7 +19,8 @@ a { -webkit-tap-highlight-color: transparent; }
 
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
   outline: 3px solid rgb(243 154 36 / 45%);
   outline-offset: 3px;
 }
@@ -42,6 +43,28 @@ h3 {
   font-family: var(--font-display);
   font-weight: 700;
 }
+
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  color: white;
+  background: var(--color-primary);
+  border-radius: var(--radius-small);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-150%);
+}
+
+.skip-link:focus {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.app-shell > main:focus { outline: none; }
 
 .app-shell {
   min-height: 100vh;
@@ -155,6 +178,21 @@ h3 {
 .message-state { padding: 5rem max(1.25rem, calc((100vw - 1180px) / 2)); }
 
 .message-state { text-align: center; }
+.message-state.error .state-kicker { color: #b62e2a; }
+.message-state.loading .state-kicker::before {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: 0.5rem;
+  border: 2px solid var(--color-line);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  content: '';
+  animation: state-spin 0.8s linear infinite;
+}
+
+@keyframes state-spin { to { transform: rotate(360deg); } }
+
 
 .button-link {
   display: inline-flex;

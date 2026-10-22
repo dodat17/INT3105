@@ -13,6 +13,7 @@ from starlette.types import Scope
 from app.api.common.auth import AuthMiddleware
 from app.api.common.errors import register_exception_handlers
 from app.api.common.request_id import RequestIdMiddleware
+from app.api.common.security_headers import SecurityHeadersMiddleware
 from app.api.router import root_router
 from app.bootstrap.settings import Settings, get_settings
 from app.domain.auth.service import AuthService
@@ -64,8 +65,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings.max_holds_per_showtime,
         settings.max_active_holds,
     )
-    # Added last runs first: request ID wraps authentication so 401s carry it too.
+    # Added last runs first: request ID and security headers also cover authentication errors.
     app.add_middleware(AuthMiddleware, tokens=tokens)
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestIdMiddleware)
     register_exception_handlers(app)
     app.include_router(root_router)

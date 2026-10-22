@@ -142,6 +142,36 @@ uv run uvicorn app.main:app --port 8080
 
 FastAPI sẽ phục vụ nội dung trong `frontend/dist` tại `http://localhost:8080`.
 
+### Chạy toàn bộ bằng Docker Compose
+
+Yêu cầu Docker có Compose. Lệnh sau build frontend và backend, khởi động PostgreSQL,
+chạy migration rồi mở ứng dụng:
+
+```bash
+docker compose up --build -d
+```
+
+Tạo dữ liệu demo bằng lệnh riêng (an toàn khi chạy lại):
+
+```bash
+docker compose run --rm seed
+```
+
+Mở `http://localhost:8080`. Tài khoản quản trị demo mặc định là
+`admin@example.test` / `admin12345`. Có thể đổi mật khẩu database, JWT và tài khoản
+seed qua các biến `POSTGRES_PASSWORD`, `JWT_SECRET`, `SEED_ADMIN_EMAIL` và
+`SEED_ADMIN_PASSWORD` trước khi chạy Compose.
+
+Xem log hoặc dừng hệ thống:
+
+```bash
+docker compose logs -f app
+docker compose down
+```
+
+Dữ liệu PostgreSQL được giữ trong volume `postgres-data`. Chỉ dùng
+`docker compose down -v` khi thực sự muốn xóa toàn bộ dữ liệu cục bộ.
+
 ## Kiểm tra mã nguồn
 
 Backend:

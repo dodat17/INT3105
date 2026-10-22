@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } 
 import type { AppContext } from '../app/AppShell';
 import { roomApi } from '../lib/apiClient';
 import type { Room } from '../types';
+import { EmptyState, ErrorState, LoadingState } from './AsyncStates';
 
 type AdminRoomsProps = Pick<AppContext, 'authenticated'>;
 
@@ -17,18 +18,27 @@ export function AdminRooms({ authenticated }: AdminRoomsProps) {
   const [cols, setCols] = useState(10);
   const [vipRows, setVipRows] = useState('5');
   const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const loadRooms = useCallback(async () => {
-    setRooms(await authenticated((token) => roomApi.list(token)));
+    setLoading(true);
+    setError('');
+    try {
+      setRooms(await authenticated((token) => roomApi.list(token)));
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Không thể tải danh sách phòng.');
+    } finally {
+      setLoading(false);
+    }
   }, [authenticated]);
 
   useEffect(() => {
     authenticated((token) => roomApi.list(token))
       .then(setRooms)
-      .catch((error: unknown) => {
-        setNotice(error instanceof Error ? error.message : 'Không thể tải danh sách phòng.');
-      });
+      .catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Không thể tải danh sách phòng.'))
+      .finally(() => setLoading(false));
   }, [authenticated]);
 
   const submitRoom = async (event: FormEvent<HTMLFormElement>) => {
@@ -36,6 +46,7 @@ export function AdminRooms({ authenticated }: AdminRoomsProps) {
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     setNotice('');
+    setError('');
     setSubmitting(true);
     try {
       const room = await authenticated((token) => roomApi.create(token, {
@@ -51,7 +62,7 @@ export function AdminRooms({ authenticated }: AdminRoomsProps) {
       await loadRooms();
       setNotice(`Đã tạo ${room.name} với ${room.seatCount} ghế.`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Không thể tạo phòng.');
+      setError(error instanceof Error ? error.message : 'Không thể tạo phòng.');
     } finally {
       setSubmitting(false);
     }
@@ -82,16 +93,16 @@ export function AdminRooms({ authenticated }: AdminRoomsProps) {
           ))}
         </div>
         <button className="button button-accent" disabled={submitting} type="submit">{submitting ? 'Đang tạo...' : 'Tạo phòng và ghế'}</button>
-        {notice && <p className="form-notice" role="status">{notice}</p>}
+        {notice && <p className="form-notice success" role="status">{notice}</p>}
       </form>
       <div className="admin-list">
         <div className="admin-list-heading"><h2>Phòng chiếu</h2><span>{rooms.length} phòng</span></div>
-        {rooms.map((room) => (
+        {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => void loadRooms()} /> : rooms.length ? rooms.map((room) => (
           <div className="room-card" key={room.id}>
             <span>{room.rows} × {room.cols}</span>
             <div><strong>{room.name}</strong><small>{room.seatCount} ghế được sinh tự động</small></div>
           </div>
-        ))}
+        )) : <EmptyState title="Chưa có phòng chiếu" message="Tạo phòng đầu tiên bằng biểu mẫu." />}
       </div>
     </div>
   );
