@@ -60,7 +60,7 @@ def test_invalid_query_and_unknown_movie(client: TestClient) -> None:
 
     missing = client.get(f"/api/v1/movies/{uuid4()}")
     assert missing.status_code == 404
-    assert missing.json()["error"]["code"] == "NOT_FOUND"
+    assert missing.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
 
 
 def test_create_movie_validates_payload(client: TestClient, admin_token: str) -> None:

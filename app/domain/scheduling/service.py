@@ -62,6 +62,7 @@ class ShowtimeService:
             if uow.showtimes.find_overlapping(room_id, showtime.starts_at, showtime.ends_at):
                 raise ShowtimeOverlapError
             uow.showtimes.add(showtime)
+            uow.inventory.initialize(showtime.id, uow.rooms.seats(room_id))
             uow.commit()
         return showtime
 
@@ -83,13 +84,16 @@ class ShowtimeService:
             if room is None:
                 raise NotFoundError
             seats = uow.rooms.seats(room.id)
-        # Every seat is AVAILABLE until bookings exist (milestone D marks BOOKED ones).
+            now = uow.clock.now()
+            statuses = uow.inventory.statuses(showtime.id, now)
         return (
             showtime,
             room,
             [
                 SeatMapEntry(
-                    seat, seat_price(showtime.base_price, seat.seat_type), SeatStatus.AVAILABLE
+                    seat,
+                    seat_price(showtime.base_price, seat.seat_type),
+                    SeatStatus(statuses.get(seat.id, "AVAILABLE")),
                 )
                 for seat in seats
             ],

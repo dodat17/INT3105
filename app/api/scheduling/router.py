@@ -28,6 +28,7 @@ class ShowtimeResponse(CamelModel):
     starts_at: datetime
     ends_at: datetime
     base_price: int
+    is_open_for_booking: bool
 
     @classmethod
     def from_domain(cls, showtime: Showtime) -> "ShowtimeResponse":
@@ -38,6 +39,7 @@ class ShowtimeResponse(CamelModel):
             starts_at=showtime.starts_at,
             ends_at=showtime.ends_at,
             base_price=showtime.base_price,
+            is_open_for_booking=showtime.is_open_for_booking,
         )
 
 

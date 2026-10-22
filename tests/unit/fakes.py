@@ -3,6 +3,13 @@ from typing import Any, Self
 from uuid import UUID
 
 from app.domain.auth.model import IssuedToken, Role, User
+from app.domain.booking.model import (
+    Booking,
+    BookingStatus,
+    InventorySeat,
+    InventoryState,
+    effective_status,
+)
 from app.domain.catalog.model import Movie
 from app.domain.cinema.model import Room, Seat
 from app.domain.errors import EmailAlreadyUsedError
@@ -18,6 +25,9 @@ class InMemoryUsers:
 
     def get(self, user_id: UUID) -> User | None:
         return self.rows.get(user_id)
+
+    def lock(self, user_id: UUID) -> User | None:
+        return self.get(user_id)
 
     def get_by_email(self, email: str) -> User | None:
         return next((u for u in self.rows.values() if u.email == email), None)
@@ -121,12 +131,129 @@ class InMemoryShowtimes:
         del self.rows[showtime_id]
 
 
+class InMemoryBookings:
+    def __init__(self) -> None:
+        self.rows: dict[UUID, Booking] = {}
+
+    def get(self, booking_id: UUID, *, lock: bool = False) -> Booking | None:
+        return self.rows.get(booking_id)
+
+    def list_for_user(
+        self, user_id: UUID, status: BookingStatus | None, now: datetime, page: int, page_size: int
+    ) -> Page[Booking]:
+        found = [
+            b
+            if effective_status(b.status, b.expires_at, now) is b.status
+            else b.with_status(BookingStatus.EXPIRED)
+            for b in self.rows.values()
+            if b.user_id == user_id
+        ]
+        if status is not None:
+            found = [b for b in found if b.status is status]
+        start = (page - 1) * page_size
+        return Page(found[start : start + page_size], page, page_size, len(found))
+
+    def count_effective_holds(
+        self, user_id: UUID, now: datetime, showtime_id: UUID | None = None
+    ) -> int:
+        return sum(
+            1
+            for b in self.rows.values()
+            if b.user_id == user_id
+            and b.status is BookingStatus.HELD
+            and b.expires_at > now
+            and (showtime_id is None or b.showtime_id == showtime_id)
+        )
+
+    def add(self, booking: Booking) -> None:
+        self.rows[booking.id] = booking
+
+    def update(self, booking: Booking) -> None:
+        self.rows[booking.id] = booking
+
+
+class InMemoryInventory:
+    def __init__(self) -> None:
+        self.rows: dict[tuple[UUID, UUID], InventorySeat] = {}
+
+    def initialize(self, showtime_id: UUID, seats: list[Seat]) -> None:
+        for seat in seats:
+            self.rows[(showtime_id, seat.id)] = InventorySeat(
+                seat, InventoryState.AVAILABLE, None, None
+            )
+
+    def lock(self, showtime_id: UUID, seat_ids: list[UUID]) -> list[InventorySeat]:
+        return [
+            self.rows[(showtime_id, seat_id)]
+            for seat_id in seat_ids
+            if (showtime_id, seat_id) in self.rows
+        ]
+
+    def acquire(
+        self,
+        showtime_id: UUID,
+        seat_ids: list[UUID],
+        booking_id: UUID,
+        expires_at: datetime,
+        now: datetime,
+    ) -> bool:
+        rows = self.lock(showtime_id, seat_ids)
+        if len(rows) != len(seat_ids) or any(
+            r.state is InventoryState.BOOKED
+            or (r.state is InventoryState.HELD and r.hold_expires_at and r.hold_expires_at > now)
+            for r in rows
+        ):
+            return False
+        for row in rows:
+            self.rows[(showtime_id, row.seat.id)] = InventorySeat(
+                row.seat, InventoryState.HELD, booking_id, expires_at
+            )
+        return True
+
+    def mark_booked(self, booking_id: UUID, now: datetime) -> int:
+        found = 0
+        for key, row in list(self.rows.items()):
+            if (
+                row.booking_id == booking_id
+                and row.state is InventoryState.HELD
+                and row.hold_expires_at
+                and row.hold_expires_at > now
+            ):
+                self.rows[key] = InventorySeat(row.seat, InventoryState.BOOKED, booking_id, None)
+                found += 1
+        return found
+
+    def release(self, booking_id: UUID) -> int:
+        found = 0
+        for key, row in list(self.rows.items()):
+            if row.booking_id == booking_id and row.state is InventoryState.HELD:
+                self.rows[key] = InventorySeat(row.seat, InventoryState.AVAILABLE, None, None)
+                found += 1
+        return found
+
+    def statuses(self, showtime_id: UUID, now: datetime) -> dict[UUID, str]:
+        return {
+            seat_id: (
+                InventoryState.AVAILABLE.value
+                if row.state is InventoryState.HELD
+                and row.hold_expires_at
+                and row.hold_expires_at <= now
+                else row.state.value
+            )
+            for (sid, seat_id), row in self.rows.items()
+            if sid == showtime_id
+        }
+
+
 class FakeUnitOfWork:
     def __init__(self) -> None:
         self.users = InMemoryUsers()
         self.movies = InMemoryMovies()
         self.rooms = InMemoryRooms()
         self.showtimes = InMemoryShowtimes()
+        self.bookings = InMemoryBookings()
+        self.inventory = InMemoryInventory()
+        self.clock = FixedClock()
         self.commits = 0
 
     def __call__(self) -> Self:

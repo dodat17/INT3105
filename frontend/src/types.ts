@@ -61,6 +61,7 @@ export type Showtime = {
   startsAt: string;
   endsAt: string;
   basePrice: number;
+  isOpenForBooking: boolean;
 };
 
 export type ShowtimePage = {
@@ -84,7 +85,7 @@ export type Seat = {
   label: string;
   seatType: 'STANDARD' | 'VIP';
   price: number;
-  status: 'AVAILABLE' | 'BOOKED';
+  status: 'AVAILABLE' | 'HELD' | 'BOOKED';
 };
 
 export type SeatMap = {
@@ -93,3 +94,34 @@ export type SeatMap = {
   seats: Seat[];
 };
 
+
+
+export type BookingStatus = 'HELD' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED';
+
+export type BookingItem = {
+  seatId: string;
+  label: string;
+  seatType: 'STANDARD' | 'VIP';
+  unitPrice: number;
+};
+
+export type Booking = {
+  id: string;
+  showtimeId: string;
+  status: BookingStatus;
+  createdAt: string;
+  expiresAt: string;
+  confirmedAt: string | null;
+  cancelledAt: string | null;
+  totalAmount: number;
+  currency: 'VND';
+  bookingCode: string | null;
+  items: BookingItem[];
+};
+
+export type BookingPage = {
+  items: Booking[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+};

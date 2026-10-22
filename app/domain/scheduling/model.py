@@ -17,10 +17,12 @@ class Showtime:
     starts_at: datetime
     ends_at: datetime
     base_price: int
+    is_open_for_booking: bool = True
 
 
 class SeatStatus(StrEnum):
     AVAILABLE = "AVAILABLE"
+    HELD = "HELD"
     BOOKED = "BOOKED"
 
 
