@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 
+import { currency } from '../lib/formatters';
 import type { SeatMap } from '../types';
 
 type SeatMapViewProps = {
@@ -7,8 +8,6 @@ type SeatMapViewProps = {
   selected?: string[];
   onToggle?: (seatId: string) => void;
 };
-
-const currency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 
 export function SeatMapView({ seatMap, selected = [], onToggle }: SeatMapViewProps) {
   const rows = seatMap.seats.reduce<Map<string, typeof seatMap.seats>>((grouped, seat) => {

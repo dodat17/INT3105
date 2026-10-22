@@ -1,26 +1,16 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
 import type { AppContext } from '../app/AppShell';
+import { cinemaDateTime, currency } from '../lib/formatters';
 import { ApiError, roomApi, showtimeApi } from '../lib/apiClient';
 import type { MoviePage, Room, Showtime } from '../types';
+import { EmptyState, ErrorState, LoadingState } from './AsyncStates';
 
 type AdminShowtimesProps = Pick<AppContext, 'authenticated'> & {
   movies: MoviePage;
 };
 
-const dateTime = new Intl.DateTimeFormat('vi-VN', {
-  timeZone: 'Asia/Ho_Chi_Minh',
-  dateStyle: 'short',
-  timeStyle: 'short',
-});
-
-const currency = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-});
-
-const cinemaDateTime = (value: string) => new Date(`${value}:00+07:00`);
+const fromCinemaLocal = (value: string) => new Date(`${value}:00+07:00`);
 
 export function AdminShowtimes({ authenticated, movies }: AdminShowtimesProps) {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -29,6 +19,9 @@ export function AdminShowtimes({ authenticated, movies }: AdminShowtimesProps) {
   const [roomId, setRoomId] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [notice, setNotice] = useState('');
+  const [noticeKind, setNoticeKind] = useState<'success' | 'error'>('success');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -47,27 +40,30 @@ export function AdminShowtimes({ authenticated, movies }: AdminShowtimesProps) {
     ]).then(([roomList, showtimePage]) => {
       setRooms(roomList);
       setShowtimes(showtimePage.items);
-    }).catch((error: unknown) => {
-      setNotice(error instanceof Error ? error.message : 'Không thể tải dữ liệu suất chiếu.');
-    });
-  }, [authenticated]);
+    })
+      .catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Không thể tải dữ liệu suất chiếu.'))
+      .finally(() => setLoading(false));
 
+  }, [authenticated]);
   const submitShowtime = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setNotice('');
+    setNoticeKind('success');
+    setError('');
     setSubmitting(true);
     try {
       await authenticated((token) => showtimeApi.create(token, {
         movieId: activeMovieId,
         roomId: activeRoomId,
-        startsAt: cinemaDateTime(startsAt).toISOString(),
+        startsAt: fromCinemaLocal(startsAt).toISOString(),
         basePrice: Number(form.get('basePrice')),
       }));
       setStartsAt('');
       await loadData();
       setNotice('Đã tạo suất chiếu.');
     } catch (error) {
+      setNoticeKind('error');
       if (error instanceof ApiError && error.code === 'SHOWTIME_OVERLAP') {
         setNotice('Phòng đã có suất chiếu trùng khoảng thời gian này.');
       } else {
@@ -79,12 +75,14 @@ export function AdminShowtimes({ authenticated, movies }: AdminShowtimesProps) {
   };
 
   const removeShowtime = async (showtime: Showtime) => {
-    if (!window.confirm(`Xóa suất chiếu lúc ${dateTime.format(new Date(showtime.startsAt))}?`)) return;
+    if (!window.confirm(`Xóa suất chiếu lúc ${cinemaDateTime.format(new Date(showtime.startsAt))}?`)) return;
+    setNoticeKind('success');
     try {
       await authenticated((token) => showtimeApi.delete(token, showtime.id));
       await loadData();
       setNotice('Đã xóa suất chiếu.');
     } catch (error) {
+      setNoticeKind('error');
       setNotice(error instanceof Error ? error.message : 'Không thể xóa suất chiếu.');
     }
   };
@@ -93,7 +91,7 @@ export function AdminShowtimes({ authenticated, movies }: AdminShowtimesProps) {
   const activeRoomId = roomId || rooms[0]?.id || '';
   const selectedMovie = movies.items.find((movie) => movie.id === activeMovieId);
   const expectedEnd = startsAt && selectedMovie
-    ? new Date(cinemaDateTime(startsAt).getTime() + selectedMovie.durationMinutes * 60_000)
+    ? new Date(fromCinemaLocal(startsAt).getTime() + selectedMovie.durationMinutes * 60_000)
     : null;
   const movieNames = new Map(movies.items.map((movie) => [movie.id, movie.title]));
   const roomNames = new Map(rooms.map((room) => [room.id, room.name]));
@@ -110,20 +108,20 @@ export function AdminShowtimes({ authenticated, movies }: AdminShowtimesProps) {
         </select></label>
         <label>Bắt đầu<input type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} required /></label>
         <label>Giá ghế thường<input defaultValue="90000" min="1000" max="10000000" name="basePrice" step="1000" type="number" required /></label>
-        <div className="expected-end"><span>Kết thúc dự kiến</span><strong>{expectedEnd ? dateTime.format(expectedEnd) : '—'}</strong></div>
+        <div className="expected-end"><span>Kết thúc dự kiến</span><strong>{expectedEnd ? cinemaDateTime.format(expectedEnd) : '—'}</strong></div>
         <button className="button button-accent" disabled={submitting || !activeMovieId || !activeRoomId} type="submit">{submitting ? 'Đang tạo...' : 'Tạo suất chiếu'}</button>
-        {notice && <p className="form-notice" role="status">{notice}</p>}
+        {notice && <p className={`form-notice ${noticeKind}`} role={noticeKind === 'error' ? 'alert' : 'status'}>{notice}</p>}
       </form>
       <div className="admin-list">
         <div className="admin-list-heading"><h2>Lịch chiếu</h2><span>{showtimes.length} suất</span></div>
         <div className="showtime-admin-list">
-          {showtimes.map((showtime) => (
+          {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => { setLoading(true); setError(''); void loadData().catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Không thể tải dữ liệu suất chiếu.')).finally(() => setLoading(false)); }} /> : showtimes.length ? showtimes.map((showtime) => (
             <article className="showtime-admin-row" key={showtime.id}>
-              <time dateTime={showtime.startsAt}><strong>{dateTime.format(new Date(showtime.startsAt))}</strong><span>đến {dateTime.format(new Date(showtime.endsAt))}</span></time>
+              <time dateTime={showtime.startsAt}><strong>{cinemaDateTime.format(new Date(showtime.startsAt))}</strong><span>đến {cinemaDateTime.format(new Date(showtime.endsAt))}</span></time>
               <div><strong>{movieNames.get(showtime.movieId) ?? 'Phim không còn trong danh mục'}</strong><span>{roomNames.get(showtime.roomId) ?? 'Phòng không xác định'} · {currency.format(showtime.basePrice)}</span></div>
               <button className="text-button danger" type="button" onClick={() => void removeShowtime(showtime)}>Xóa</button>
             </article>
-          ))}
+          )) : <EmptyState title="Chưa có suất chiếu" message="Tạo suất chiếu đầu tiên bằng biểu mẫu." />}
         </div>
       </div>
     </div>

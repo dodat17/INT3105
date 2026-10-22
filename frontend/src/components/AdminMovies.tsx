@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react';
 
 import type { AppContext } from '../app/AppShell';
+import { EmptyState } from './AsyncStates';
 
 type AdminMoviesProps = Pick<AppContext, 'addMovie' | 'deleteMovie' | 'movies'>;
 
 export function AdminMovies({ addMovie, deleteMovie, movies }: AdminMoviesProps) {
   const [notice, setNotice] = useState('');
+  const [noticeKind, setNoticeKind] = useState<'success' | 'error'>('success');
   const [submitting, setSubmitting] = useState(false);
 
   const submitMovie = async (event: FormEvent<HTMLFormElement>) => {
@@ -13,6 +15,7 @@ export function AdminMovies({ addMovie, deleteMovie, movies }: AdminMoviesProps)
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     setNotice('');
+    setNoticeKind('success');
     setSubmitting(true);
     try {
       const movie = await addMovie({
@@ -25,6 +28,7 @@ export function AdminMovies({ addMovie, deleteMovie, movies }: AdminMoviesProps)
       formElement.reset();
       setNotice(`Đã thêm “${movie.title}”.`);
     } catch (error) {
+      setNoticeKind('error');
       setNotice(error instanceof Error ? error.message : 'Không thể thêm phim.');
     } finally {
       setSubmitting(false);
@@ -33,10 +37,12 @@ export function AdminMovies({ addMovie, deleteMovie, movies }: AdminMoviesProps)
 
   const removeMovie = async (movieId: string, title: string) => {
     if (!window.confirm(`Xóa “${title}” khỏi danh mục?`)) return;
+    setNoticeKind('success');
     try {
       await deleteMovie(movieId);
       setNotice(`Đã xóa “${title}”.`);
     } catch (error) {
+      setNoticeKind('error');
       setNotice(error instanceof Error ? error.message : 'Không thể xóa phim.');
     }
   };
@@ -51,17 +57,17 @@ export function AdminMovies({ addMovie, deleteMovie, movies }: AdminMoviesProps)
         <label>Phân loại tuổi<input maxLength={10} name="ageRating" placeholder="T13" /></label>
         <label>Mô tả<textarea maxLength={5000} name="description" rows={4} /></label>
         <button className="button button-accent" disabled={submitting} type="submit">{submitting ? 'Đang thêm...' : 'Thêm vào danh mục'}</button>
-        {notice && <p className="form-notice" role="status">{notice}</p>}
+        {notice && <p className={`form-notice ${noticeKind}`} role={noticeKind === 'error' ? 'alert' : 'status'}>{notice}</p>}
       </form>
       <div className="admin-list">
         <div className="admin-list-heading"><h2>Danh mục phim</h2><span>{movies.totalItems} phim</span></div>
-        {movies.items.map((movie) => (
+        {movies.items.length ? movies.items.map((movie) => (
           <div className="admin-movie-row" key={movie.id}>
             <i />
             <div><strong>{movie.title}</strong><span>{movie.genre || 'Chưa phân loại'} · {movie.durationMinutes} phút</span></div>
             <button className="text-button danger" type="button" onClick={() => void removeMovie(movie.id, movie.title)}>Xóa</button>
           </div>
-        ))}
+        )) : <EmptyState title="Chưa có phim" message="Thêm phim đầu tiên bằng biểu mẫu." />}
       </div>
     </div>
   );

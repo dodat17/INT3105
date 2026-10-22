@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { ApiError, authApi, movieApi } from '../lib/apiClient';
 import type { LoginPayload, Movie, MoviePage, MoviePayload, RegisterPayload, User } from '../types';
@@ -23,12 +23,17 @@ export type AppContext = {
 };
 
 export function AppShell() {
+  const location = useLocation();
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(!token);
   const [movies, setMovies] = useState<MoviePage>(EMPTY_MOVIE_PAGE);
   const [moviesLoading, setMoviesLoading] = useState(true);
   const [moviesError, setMoviesError] = useState('');
+
+  useEffect(() => {
+    document.getElementById('main-content')?.focus();
+  }, [location.pathname]);
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
@@ -112,6 +117,7 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">Bỏ qua đến nội dung chính</a>
       <header className="site-header">
         <NavLink className="brand" to="/" aria-label="Trang chủ Rạp Màn Ảnh">
           <span className="brand-mark" aria-hidden="true"><i /><i /></span>
@@ -136,7 +142,7 @@ export function AppShell() {
           )}
         </div>
       </header>
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <Outlet context={context} />
       </main>
       <footer className="site-footer">
