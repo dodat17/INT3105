@@ -1,7 +1,6 @@
 **Đặc tả yêu cầu — Backend đặt vé xem phim**  
-Phiên bản: 1.2  
    
- Ngày: 01/10/2026  
+Ngày: 01/10/2026  
    
  Trạng thái: Đặc tả để triển khai và nghiệm thu môn học; đã qua rà soát nghiệp vụ lần 1.  
 **1. Mục tiêu và nguyên tắc**  
