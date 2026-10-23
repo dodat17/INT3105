@@ -155,3 +155,15 @@ def test_delete_showtime(service: ShowtimeService, uow: FakeUnitOfWork) -> None:
         service.seat_map(showtime.id)
     with pytest.raises(NotFoundError):
         service.delete_showtime(ADMIN, showtime.id)
+
+
+def test_get_showtime_returns_movie_and_room(service: ShowtimeService, uow: FakeUnitOfWork) -> None:
+    created = _create(service, uow, at(0))
+
+    showtime, movie, room = service.get_showtime(created.id)
+
+    assert showtime == created
+    assert movie.id == created.movie_id
+    assert room.name == "Phòng 1"
+    with pytest.raises(NotFoundError):
+        service.get_showtime(uuid4())

@@ -29,6 +29,7 @@ class ShowtimeResponse(CamelModel):
     starts_at: datetime
     ends_at: datetime
     base_price: int
+    currency: str = "VND"
     is_open_for_booking: bool
 
     @classmethod
@@ -44,9 +45,19 @@ class ShowtimeResponse(CamelModel):
         )
 
 
+class MovieRef(CamelModel):
+    id: UUID
+    title: str
+
+
 class AuditoriumRef(CamelModel):
     id: UUID
     name: str
+
+
+class ShowtimeDetailResponse(ShowtimeResponse):
+    movie: MovieRef
+    auditorium: AuditoriumRef
 
 
 class SeatResponse(CamelModel):
@@ -95,6 +106,16 @@ def list_showtimes(
         page=result.page,
         page_size=result.page_size,
         total_items=result.total_items,
+    )
+
+
+@router.get("/{showtime_id}", summary="Chi tiết suất chiếu")
+def get_showtime(showtime_id: UUID, service: ShowtimeServiceDep) -> ShowtimeDetailResponse:
+    showtime, movie, room = service.get_showtime(showtime_id)
+    return ShowtimeDetailResponse(
+        **ShowtimeResponse.from_domain(showtime).model_dump(),
+        movie=MovieRef(id=movie.id, title=movie.title),
+        auditorium=AuditoriumRef(id=room.id, name=room.name),
     )
 
 

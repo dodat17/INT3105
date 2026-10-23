@@ -15,7 +15,7 @@ from app.domain.ports import TokenService
 _PUBLIC_API_ROUTES: list[tuple[frozenset[str], re.Pattern[str]]] = [
     (frozenset({"POST"}), re.compile(r"/api/v1/auth/(register|login)")),
     (frozenset({"GET", "HEAD"}), re.compile(r"/api/v1/movies(/[^/]+)?")),
-    (frozenset({"GET", "HEAD"}), re.compile(r"/api/v1/showtimes(/[^/]+/seats)?")),
+    (frozenset({"GET", "HEAD"}), re.compile(r"/api/v1/showtimes(/[^/]+(/seats)?)?")),
 ]
 
 

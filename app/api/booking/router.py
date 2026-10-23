@@ -8,7 +8,7 @@ from pydantic import Field
 from app.api.common.auth import ActorDep
 from app.api.common.schemas import CamelModel, PageResponse, RequestModel
 from app.api.dependencies import BookingServiceDep
-from app.api.scheduling.router import AuditoriumRef
+from app.api.scheduling.router import AuditoriumRef, MovieRef
 from app.domain.booking.model import Booking, BookingStatus
 from app.domain.cinema.model import SeatType
 
@@ -25,11 +25,6 @@ class BookingItemResponse(CamelModel):
     label: str
     seat_type: SeatType
     unit_price: int
-
-
-class MovieRef(CamelModel):
-    id: UUID
-    title: str
 
 
 class ShowtimeRef(CamelModel):

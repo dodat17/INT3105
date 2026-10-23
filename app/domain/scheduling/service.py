@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
 from app.domain.auth.model import Actor, require_admin
+from app.domain.catalog.model import Movie
 from app.domain.cinema.model import Room
 from app.domain.errors import BusinessRuleViolation, NotFoundError, ShowtimeOverlapError
 from app.domain.ports import Page, UnitOfWorkFactory
@@ -29,6 +30,17 @@ class ShowtimeService:
         )
         with self._uow_factory() as uow:
             return uow.showtimes.search(movie_id, starts_from, starts_before, page, page_size)
+
+    def get_showtime(self, showtime_id: UUID) -> tuple[Showtime, Movie, Room]:
+        with self._uow_factory() as uow:
+            showtime = uow.showtimes.get(showtime_id)
+            if showtime is None:
+                raise NotFoundError
+            movie = uow.movies.get(showtime.movie_id)
+            room = uow.rooms.get(showtime.room_id)
+        if movie is None or room is None:
+            raise NotFoundError
+        return showtime, movie, room
 
     def create_showtime(
         self,
