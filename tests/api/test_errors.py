@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from uuid import uuid4
 
 from fastapi.routing import APIRoute
@@ -52,3 +53,42 @@ def test_unexpected_error_hides_internals() -> None:
     assert error["code"] == "INTERNAL_ERROR"
     assert "SELECT" not in error["message"]
     assert error["requestId"] == response.headers["x-request-id"]
+
+
+def test_body_must_be_json_and_is_checked_before_auth() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/api/v1/bookings", content=b"{}", headers={"Content-Type": "text/plain"}
+        )
+        no_body = client.delete(
+            f"/api/v1/bookings/{uuid4()}", headers={"Content-Type": "text/plain"}
+        )
+
+    assert response.status_code == 415
+    assert response.json()["error"]["code"] == "UNSUPPORTED_MEDIA_TYPE"
+    assert no_body.status_code == 401
+
+
+def test_body_over_64_kb_is_rejected(client: TestClient) -> None:
+    big_name = "x" * (64 * 1024)
+    payload = {"email": "big@example.test", "password": "secret123", "fullName": big_name}
+
+    response = client.post("/api/v1/auth/register", json=payload)
+
+    def chunks() -> Iterator[bytes]:
+        yield b'{"email": "big@example.test", "password": "secret123", "fullName": "'
+        yield big_name.encode()
+        yield b'"}'
+
+    chunked = client.post(
+        "/api/v1/auth/register", content=chunks(), headers={"Content-Type": "application/json"}
+    )
+
+    assert response.status_code == 413
+    assert response.json()["error"]["code"] == "PAYLOAD_TOO_LARGE"
+    assert chunked.status_code == 413
+    assert chunked.json()["error"]["code"] == "PAYLOAD_TOO_LARGE"
+    login = client.post(
+        "/api/v1/auth/login", json={"email": "big@example.test", "password": "secret123"}
+    )
+    assert login.status_code == 401
