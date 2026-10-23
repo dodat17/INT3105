@@ -12,11 +12,12 @@ from app.domain.cinema.model import SeatType
 from app.domain.scheduling.model import SeatMapEntry, SeatStatus, Showtime
 
 router = APIRouter(prefix="/showtimes", tags=["scheduling"])
+admin_router = APIRouter(prefix="/admin/showtimes", tags=["admin"])
 
 
 class ShowtimeCreateRequest(RequestModel):
     movie_id: UUID
-    room_id: UUID
+    auditorium_id: UUID
     starts_at: Annotated[AwareDatetime, Field(description="ISO 8601 kèm múi giờ")]
     base_price: Annotated[int, Field(gt=0, le=10_000_000, description="Giá ghế thường, VND")]
 
@@ -24,7 +25,7 @@ class ShowtimeCreateRequest(RequestModel):
 class ShowtimeResponse(CamelModel):
     id: UUID
     movie_id: UUID
-    room_id: UUID
+    auditorium_id: UUID
     starts_at: datetime
     ends_at: datetime
     base_price: int
@@ -35,7 +36,7 @@ class ShowtimeResponse(CamelModel):
         return cls(
             id=showtime.id,
             movie_id=showtime.movie_id,
-            room_id=showtime.room_id,
+            auditorium_id=showtime.room_id,
             starts_at=showtime.starts_at,
             ends_at=showtime.ends_at,
             base_price=showtime.base_price,
@@ -43,7 +44,7 @@ class ShowtimeResponse(CamelModel):
         )
 
 
-class RoomRef(CamelModel):
+class AuditoriumRef(CamelModel):
     id: UUID
     name: str
 
@@ -73,7 +74,7 @@ class SeatResponse(CamelModel):
 
 class SeatMapResponse(CamelModel):
     showtime_id: UUID
-    room: RoomRef
+    auditorium: AuditoriumRef
     seats: list[SeatResponse]
 
 
@@ -102,26 +103,26 @@ def seat_map(showtime_id: UUID, service: ShowtimeServiceDep) -> SeatMapResponse:
     showtime, room, entries = service.seat_map(showtime_id)
     return SeatMapResponse(
         showtime_id=showtime.id,
-        room=RoomRef(id=room.id, name=room.name),
+        auditorium=AuditoriumRef(id=room.id, name=room.name),
         seats=[SeatResponse.from_domain(entry) for entry in entries],
     )
 
 
-@router.post("", status_code=201, summary="Tạo suất chiếu (ADMIN)")
+@admin_router.post("", status_code=201, summary="Tạo suất chiếu (ADMIN)")
 def create_showtime(
     payload: ShowtimeCreateRequest, actor: ActorDep, service: ShowtimeServiceDep
 ) -> ShowtimeResponse:
     showtime = service.create_showtime(
         actor,
         movie_id=payload.movie_id,
-        room_id=payload.room_id,
+        room_id=payload.auditorium_id,
         starts_at=payload.starts_at,
         base_price=payload.base_price,
     )
     return ShowtimeResponse.from_domain(showtime)
 
 
-@router.delete("/{showtime_id}", status_code=204, summary="Xóa suất chiếu (ADMIN)")
+@admin_router.delete("/{showtime_id}", status_code=204, summary="Xóa suất chiếu (ADMIN)")
 def delete_showtime(showtime_id: UUID, actor: ActorDep, service: ShowtimeServiceDep) -> Response:
     service.delete_showtime(actor, showtime_id)
     return Response(status_code=204)

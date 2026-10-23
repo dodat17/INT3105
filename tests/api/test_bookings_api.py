@@ -304,7 +304,7 @@ def test_booking_rejects_invalid_seat_sets_and_started_showtime(
         assert response.json()["error"]["details"] == {"fields": ["seatIds"]}
 
     other_showtime = create_showtime(
-        client, admin_token, setup, _future_start(), roomId=setup["other_room"]
+        client, admin_token, setup, _future_start(), auditoriumId=setup["other_room"]
     ).json()
     other_seat = client.get(f"/api/v1/showtimes/{other_showtime['id']}/seats").json()["seats"][0][
         "id"

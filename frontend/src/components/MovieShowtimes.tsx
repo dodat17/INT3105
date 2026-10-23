@@ -69,7 +69,7 @@ export function MovieShowtimes({ movieId }: MovieShowtimesProps) {
         ))}</div>
       ) : <EmptyState title="Chưa có suất chiếu" message="Thử chọn ngày khác." />}
       {selectedId && <div className="seat-map-section">
-        <div><p className="section-index">SƠ ĐỒ GHẾ</p><h3>{seatMap?.room.name ?? 'Đang tải phòng chiếu...'}</h3></div>
+        <div><p className="section-index">SƠ ĐỒ GHẾ</p><h3>{seatMap?.auditorium.name ?? 'Đang tải phòng chiếu...'}</h3></div>
         {seatLoading ? <LoadingState /> : seatMap && <><SeatMapView seatMap={seatMap} selected={selectedSeats} onToggle={toggleSeat} />
           {user?.role === 'CUSTOMER' ? <BookingSummary seats={selected} submitting={submitting} onSubmit={() => void createBooking()} /> : <p><Link to="/login">Đăng nhập tài khoản khách hàng</Link> để giữ ghế.</p>}
         </>}

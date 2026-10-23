@@ -57,7 +57,7 @@ export type RoomPayload = {
 export type Showtime = {
   id: string;
   movieId: string;
-  roomId: string;
+  auditoriumId: string;
   startsAt: string;
   endsAt: string;
   basePrice: number;
@@ -73,7 +73,7 @@ export type ShowtimePage = {
 
 export type ShowtimePayload = {
   movieId: string;
-  roomId: string;
+  auditoriumId: string;
   startsAt: string;
   basePrice: number;
 };
@@ -90,7 +90,7 @@ export type Seat = {
 
 export type SeatMap = {
   showtimeId: string;
-  room: Pick<Room, 'id' | 'name'>;
+  auditorium: Pick<Room, 'id' | 'name'>;
   seats: Seat[];
 };
 

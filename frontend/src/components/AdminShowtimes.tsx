@@ -55,7 +55,7 @@ export function AdminShowtimes({ authenticated, movies }: AdminShowtimesProps) {
     try {
       await authenticated((token) => showtimeApi.create(token, {
         movieId: activeMovieId,
-        roomId: activeRoomId,
+        auditoriumId: activeRoomId,
         startsAt: fromCinemaLocal(startsAt).toISOString(),
         basePrice: Number(form.get('basePrice')),
       }));
@@ -118,7 +118,7 @@ export function AdminShowtimes({ authenticated, movies }: AdminShowtimesProps) {
           {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => { setLoading(true); setError(''); void loadData().catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Không thể tải dữ liệu suất chiếu.')).finally(() => setLoading(false)); }} /> : showtimes.length ? showtimes.map((showtime) => (
             <article className="showtime-admin-row" key={showtime.id}>
               <time dateTime={showtime.startsAt}><strong>{cinemaDateTime.format(new Date(showtime.startsAt))}</strong><span>đến {cinemaDateTime.format(new Date(showtime.endsAt))}</span></time>
-              <div><strong>{movieNames.get(showtime.movieId) ?? 'Phim không còn trong danh mục'}</strong><span>{roomNames.get(showtime.roomId) ?? 'Phòng không xác định'} · {currency.format(showtime.basePrice)}</span></div>
+              <div><strong>{movieNames.get(showtime.movieId) ?? 'Phim không còn trong danh mục'}</strong><span>{roomNames.get(showtime.auditoriumId) ?? 'Phòng không xác định'} · {currency.format(showtime.basePrice)}</span></div>
               <button className="text-button danger" type="button" onClick={() => void removeShowtime(showtime)}>Xóa</button>
             </article>
           )) : <EmptyState title="Chưa có suất chiếu" message="Tạo suất chiếu đầu tiên bằng biểu mẫu." />}

@@ -94,7 +94,9 @@ def admin_token(client: TestClient, settings: Settings) -> str:
 
 def create_room(client: TestClient, token: str, **overrides: Any) -> Any:
     body = {"name": "Phòng 1", "rows": 5, "cols": 8, "vipRows": [4, 5]}
-    return client.post("/api/v1/rooms", json={**body, **overrides}, headers=auth_header(token))
+    return client.post(
+        "/api/v1/admin/auditoriums", json={**body, **overrides}, headers=auth_header(token)
+    )
 
 
 def create_showtime(
@@ -102,18 +104,20 @@ def create_showtime(
 ) -> Any:
     body = {
         "movieId": setup["movie"],
-        "roomId": setup["room"],
+        "auditoriumId": setup["room"],
         "startsAt": starts_at,
         "basePrice": 90000,
     }
-    return client.post("/api/v1/showtimes", json={**body, **overrides}, headers=auth_header(token))
+    return client.post(
+        "/api/v1/admin/showtimes", json={**body, **overrides}, headers=auth_header(token)
+    )
 
 
 @pytest.fixture
 def setup(client: TestClient, admin_token: str) -> dict[str, str]:
     """One 120-minute movie, "Phòng 1" (3x4, row C is VIP) and a 1-seat "Phòng 2"."""
     movie = client.post(
-        "/api/v1/movies",
+        "/api/v1/admin/movies",
         json={"title": "Mai", "durationMinutes": 120},
         headers=auth_header(admin_token),
     ).json()

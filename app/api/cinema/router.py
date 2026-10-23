@@ -9,10 +9,11 @@ from app.api.common.schemas import CamelModel, RequestModel
 from app.api.dependencies import RoomServiceDep
 from app.domain.cinema.model import MAX_COLS, MAX_ROWS, Room
 
-router = APIRouter(prefix="/rooms", tags=["cinema"])
+# The domain says "room"; the public contract (requirements section 7) says "auditorium".
+router = APIRouter(prefix="/admin/auditoriums", tags=["admin"])
 
 
-class RoomCreateRequest(RequestModel):
+class AuditoriumCreateRequest(RequestModel):
     name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
     rows: Annotated[int, Field(ge=1, le=MAX_ROWS)]
     cols: Annotated[int, Field(ge=1, le=MAX_COLS)]
@@ -21,7 +22,7 @@ class RoomCreateRequest(RequestModel):
     ] = []
 
 
-class RoomResponse(CamelModel):
+class AuditoriumResponse(CamelModel):
     id: UUID
     name: str
     rows: int
@@ -29,7 +30,7 @@ class RoomResponse(CamelModel):
     seat_count: int
 
     @classmethod
-    def from_domain(cls, room: Room) -> "RoomResponse":
+    def from_domain(cls, room: Room) -> "AuditoriumResponse":
         return cls(
             id=room.id,
             name=room.name,
@@ -40,14 +41,14 @@ class RoomResponse(CamelModel):
 
 
 @router.get("", summary="Danh sách phòng chiếu (ADMIN)")
-def list_rooms(actor: ActorDep, service: RoomServiceDep) -> list[RoomResponse]:
-    return [RoomResponse.from_domain(room) for room in service.list_rooms(actor)]
+def list_auditoriums(actor: ActorDep, service: RoomServiceDep) -> list[AuditoriumResponse]:
+    return [AuditoriumResponse.from_domain(room) for room in service.list_rooms(actor)]
 
 
 @router.post("", status_code=201, summary="Tạo phòng chiếu và sinh ghế (ADMIN)")
-def create_room(
-    payload: RoomCreateRequest, actor: ActorDep, service: RoomServiceDep
-) -> RoomResponse:
+def create_auditorium(
+    payload: AuditoriumCreateRequest, actor: ActorDep, service: RoomServiceDep
+) -> AuditoriumResponse:
     room = service.create_room(
         actor,
         name=payload.name,
@@ -55,4 +56,4 @@ def create_room(
         cols=payload.cols,
         vip_rows=set(payload.vip_rows),
     )
-    return RoomResponse.from_domain(room)
+    return AuditoriumResponse.from_domain(room)

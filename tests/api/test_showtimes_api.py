@@ -25,7 +25,7 @@ def test_overlapping_showtime_in_same_room_is_rejected(
     clash = create_showtime(client, admin_token, setup, "2026-10-20T20:30:00+07:00")
     back_to_back = create_showtime(client, admin_token, setup, "2026-10-20T21:00:00+07:00")
     other_room = create_showtime(
-        client, admin_token, setup, "2026-10-20T19:30:00+07:00", roomId=setup["other_room"]
+        client, admin_token, setup, "2026-10-20T19:30:00+07:00", auditoriumId=setup["other_room"]
     )
 
     assert clash.status_code == 409
@@ -81,7 +81,7 @@ def test_guest_sees_seat_map_with_vip_prices(
     assert response.status_code == 200
     body = response.json()
     assert body["showtimeId"] == showtime["id"]
-    assert body["room"]["name"] == "Phòng 1"
+    assert body["auditorium"]["name"] == "Phòng 1"
     seats = body["seats"]
     assert len(seats) == 12
     assert [s["label"] for s in seats[:5]] == ["A1", "A2", "A3", "A4", "B1"]
@@ -96,16 +96,18 @@ def test_admin_deletes_showtime_and_movie_in_use_is_kept(
     client: TestClient, admin_token: str, customer_token: str, setup: dict[str, str]
 ) -> None:
     showtime = create_showtime(client, admin_token, setup, "2026-10-20T19:00:00+07:00").json()
-    url = f"/api/v1/showtimes/{showtime['id']}"
+    url = f"/api/v1/admin/showtimes/{showtime['id']}"
 
-    blocked = client.delete(f"/api/v1/movies/{setup['movie']}", headers=auth_header(admin_token))
+    blocked = client.delete(
+        f"/api/v1/admin/movies/{setup['movie']}", headers=auth_header(admin_token)
+    )
     assert blocked.status_code == 400
     assert client.delete(url, headers=auth_header(customer_token)).status_code == 403
 
     assert client.delete(url, headers=auth_header(admin_token)).status_code == 204
-    assert client.get(f"{url}/seats").status_code == 404
+    assert client.get(f"/api/v1/showtimes/{showtime['id']}/seats").status_code == 404
     assert client.delete(url, headers=auth_header(admin_token)).status_code == 404
-    movie_url = f"/api/v1/movies/{setup['movie']}"
+    movie_url = f"/api/v1/admin/movies/{setup['movie']}"
     assert client.delete(movie_url, headers=auth_header(admin_token)).status_code == 204
 
 
@@ -113,7 +115,7 @@ def test_only_admin_creates_showtimes(
     client: TestClient, admin_token: str, customer_token: str, setup: dict[str, str]
 ) -> None:
     as_customer = create_showtime(client, customer_token, setup, "2026-10-20T19:00:00+07:00")
-    as_guest = client.post("/api/v1/showtimes", json={})
+    as_guest = client.post("/api/v1/admin/showtimes", json={})
 
     assert as_customer.status_code == 403
     assert as_guest.status_code == 401

@@ -7,9 +7,12 @@ from pydantic import Field, StringConstraints
 from app.api.common.auth import ActorDep
 from app.api.common.schemas import CamelModel, PageResponse, RequestModel
 from app.api.dependencies import MovieServiceDep
+from app.domain.auth.model import require_admin
 from app.domain.catalog.model import Movie
+from app.domain.ports import Page
 
 router = APIRouter(prefix="/movies", tags=["catalog"])
+admin_router = APIRouter(prefix="/admin/movies", tags=["admin"])
 
 
 class MovieCreateRequest(RequestModel):
@@ -40,14 +43,7 @@ class MovieResponse(CamelModel):
         )
 
 
-@router.get("", summary="Danh sách phim (tìm theo tên, phân trang)")
-def list_movies(
-    service: MovieServiceDep,
-    q: Annotated[str | None, Query(max_length=100, description="Tìm theo tên phim")] = None,
-    page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
-) -> PageResponse[MovieResponse]:
-    result = service.list_movies(q, page, page_size)
+def _movie_page(result: Page[Movie]) -> PageResponse[MovieResponse]:
     return PageResponse[MovieResponse](
         items=[MovieResponse.from_domain(movie) for movie in result.items],
         page=result.page,
@@ -56,12 +52,39 @@ def list_movies(
     )
 
 
+QueryParam = Annotated[str | None, Query(max_length=100, description="Tìm theo tên phim")]
+PageParam = Annotated[int, Query(ge=1)]
+PageSizeParam = Annotated[int, Query(alias="pageSize", ge=1, le=100)]
+
+
+@router.get("", summary="Danh sách phim (tìm theo tên, phân trang)")
+def list_movies(
+    service: MovieServiceDep,
+    q: QueryParam = None,
+    page: PageParam = 1,
+    page_size: PageSizeParam = 20,
+) -> PageResponse[MovieResponse]:
+    return _movie_page(service.list_movies(q, page, page_size))
+
+
 @router.get("/{movie_id}", summary="Chi tiết phim")
 def get_movie(movie_id: UUID, service: MovieServiceDep) -> MovieResponse:
     return MovieResponse.from_domain(service.get_movie(movie_id))
 
 
-@router.post("", status_code=201, summary="Thêm phim (ADMIN)")
+@admin_router.get("", summary="Danh sách phim cho quản trị (ADMIN)")
+def admin_list_movies(
+    actor: ActorDep,
+    service: MovieServiceDep,
+    q: QueryParam = None,
+    page: PageParam = 1,
+    page_size: PageSizeParam = 20,
+) -> PageResponse[MovieResponse]:
+    require_admin(actor)
+    return _movie_page(service.list_movies(q, page, page_size))
+
+
+@admin_router.post("", status_code=201, summary="Thêm phim (ADMIN)")
 def create_movie(
     payload: MovieCreateRequest, actor: ActorDep, service: MovieServiceDep
 ) -> MovieResponse:
@@ -76,7 +99,7 @@ def create_movie(
     return MovieResponse.from_domain(movie)
 
 
-@router.delete("/{movie_id}", status_code=204, summary="Xóa phim (ADMIN)")
+@admin_router.delete("/{movie_id}", status_code=204, summary="Xóa phim (ADMIN)")
 def delete_movie(movie_id: UUID, actor: ActorDep, service: MovieServiceDep) -> Response:
     service.delete_movie(actor, movie_id)
     return Response(status_code=204)

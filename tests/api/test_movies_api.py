@@ -8,7 +8,9 @@ from tests.api.conftest import auth_header
 
 def _create(client: TestClient, token: str, **overrides: Any) -> Any:
     body = {"title": "Mai", "durationMinutes": 131, "genre": "Tâm lý", "ageRating": "T18"}
-    return client.post("/api/v1/movies", json={**body, **overrides}, headers=auth_header(token))
+    return client.post(
+        "/api/v1/admin/movies", json={**body, **overrides}, headers=auth_header(token)
+    )
 
 
 def test_admin_creates_and_deletes_movie(client: TestClient, admin_token: str) -> None:
@@ -20,7 +22,7 @@ def test_admin_creates_and_deletes_movie(client: TestClient, admin_token: str) -
 
     assert client.get(f"/api/v1/movies/{movie['id']}").json() == movie
 
-    deleted = client.delete(f"/api/v1/movies/{movie['id']}", headers=auth_header(admin_token))
+    deleted = client.delete(f"/api/v1/admin/movies/{movie['id']}", headers=auth_header(admin_token))
     assert deleted.status_code == 204
     assert client.get(f"/api/v1/movies/{movie['id']}").status_code == 404
 
@@ -75,7 +77,9 @@ def test_customer_cannot_call_admin_movie_api(
     movie = _create(client, admin_token).json()
 
     created = _create(client, customer_token)
-    deleted = client.delete(f"/api/v1/movies/{movie['id']}", headers=auth_header(customer_token))
+    deleted = client.delete(
+        f"/api/v1/admin/movies/{movie['id']}", headers=auth_header(customer_token)
+    )
 
     assert created.status_code == deleted.status_code == 403
     assert created.json()["error"]["code"] == "FORBIDDEN"
@@ -83,5 +87,20 @@ def test_customer_cannot_call_admin_movie_api(
 
 
 def test_guest_cannot_call_admin_movie_api(client: TestClient) -> None:
-    assert client.post("/api/v1/movies", json={}).status_code == 401
-    assert client.delete(f"/api/v1/movies/{uuid4()}").status_code == 401
+    assert client.post("/api/v1/admin/movies", json={}).status_code == 401
+    assert client.delete(f"/api/v1/admin/movies/{uuid4()}").status_code == 401
+
+
+def test_admin_lists_movies_in_admin_namespace(
+    client: TestClient, admin_token: str, customer_token: str
+) -> None:
+    movie = _create(client, admin_token).json()
+
+    listing = client.get("/api/v1/admin/movies", headers=auth_header(admin_token))
+
+    assert listing.status_code == 200
+    assert listing.json()["items"] == [movie]
+    assert (
+        client.get("/api/v1/admin/movies", headers=auth_header(customer_token)).status_code == 403
+    )
+    assert client.get("/api/v1/admin/movies").status_code == 401

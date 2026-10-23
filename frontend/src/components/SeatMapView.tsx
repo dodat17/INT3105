@@ -20,7 +20,7 @@ export function SeatMapView({ seatMap, selected = [], onToggle }: SeatMapViewPro
   return (
     <div className="seat-map-panel">
       <div className="screen"><span>MÀN HÌNH</span></div>
-      <div className="seat-map" aria-label={`Sơ đồ ghế ${seatMap.room.name}`}>
+      <div className="seat-map" aria-label={`Sơ đồ ghế ${seatMap.auditorium.name}`}>
         {[...rows].map(([rowLabel, seats]) => (
           <div className="seat-row" key={rowLabel} style={rowStyle}>
             <span>{rowLabel}</span>

@@ -46,7 +46,11 @@ _DOMAIN_ERRORS: dict[type[DomainError], tuple[int, str, str]] = {
     EmailAlreadyUsedError: (409, "EMAIL_ALREADY_USED", "Email đã được sử dụng."),
     InvalidCredentialsError: (401, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng."),
     InvalidTokenError: UNAUTHENTICATED,
-    RoomNameAlreadyUsedError: (409, "ROOM_NAME_ALREADY_USED", "Tên phòng đã tồn tại."),
+    RoomNameAlreadyUsedError: (
+        409,
+        "AUDITORIUM_NAME_ALREADY_USED",
+        "Tên phòng chiếu đã tồn tại.",
+    ),
     ShowtimeOverlapError: (
         409,
         "SHOWTIME_OVERLAP",

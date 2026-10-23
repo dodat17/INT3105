@@ -78,22 +78,22 @@ export const movieApi = {
   },
   get: (movieId: string) => apiRequest<Movie>(`/movies/${movieId}`),
   create: (token: string, payload: MoviePayload) =>
-    apiRequest<Movie>('/movies', {
+    apiRequest<Movie>('/admin/movies', {
       method: 'POST',
       headers: authorization(token),
       body: JSON.stringify(payload),
     }),
   delete: (token: string, movieId: string) =>
-    apiRequest<void>(`/movies/${movieId}`, {
+    apiRequest<void>(`/admin/movies/${movieId}`, {
       method: 'DELETE',
       headers: authorization(token),
     }),
 };
 
 export const roomApi = {
-  list: (token: string) => apiRequest<Room[]>('/rooms', { headers: authorization(token) }),
+  list: (token: string) => apiRequest<Room[]>('/admin/auditoriums', { headers: authorization(token) }),
   create: (token: string, payload: RoomPayload) =>
-    apiRequest<Room>('/rooms', {
+    apiRequest<Room>('/admin/auditoriums', {
       method: 'POST',
       headers: authorization(token),
       body: JSON.stringify(payload),
@@ -109,13 +109,13 @@ export const showtimeApi = {
   },
   seats: (showtimeId: string) => apiRequest<SeatMap>(`/showtimes/${showtimeId}/seats`),
   create: (token: string, payload: ShowtimePayload) =>
-    apiRequest<Showtime>('/showtimes', {
+    apiRequest<Showtime>('/admin/showtimes', {
       method: 'POST',
       headers: authorization(token),
       body: JSON.stringify(payload),
     }),
   delete: (token: string, showtimeId: string) =>
-    apiRequest<void>(`/showtimes/${showtimeId}`, {
+    apiRequest<void>(`/admin/showtimes/${showtimeId}`, {
       method: 'DELETE',
       headers: authorization(token),
     }),
