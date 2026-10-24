@@ -136,6 +136,19 @@ class SqlAlchemyMovieRepository:
             )
         )
 
+    def update(self, movie: Movie) -> None:
+        self._session.execute(
+            update(MovieModel)
+            .where(MovieModel.id == movie.id)
+            .values(
+                title=movie.title,
+                description=movie.description,
+                duration_minutes=movie.duration_minutes,
+                genre=movie.genre,
+                age_rating=movie.age_rating,
+            )
+        )
+
     def delete(self, movie_id: UUID) -> None:
         self._session.execute(delete(MovieModel).where(MovieModel.id == movie_id))
 

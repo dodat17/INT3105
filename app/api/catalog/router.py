@@ -23,6 +23,10 @@ class MovieCreateRequest(RequestModel):
     age_rating: Annotated[str, StringConstraints(max_length=10)] = ""
 
 
+class MovieUpdateRequest(MovieCreateRequest):
+    """PUT replaces the whole movie: omitted optional fields are reset to their defaults."""
+
+
 class MovieResponse(CamelModel):
     id: UUID
     title: str
@@ -90,6 +94,22 @@ def create_movie(
 ) -> MovieResponse:
     movie = service.create_movie(
         actor,
+        title=payload.title,
+        description=payload.description,
+        duration_minutes=payload.duration_minutes,
+        genre=payload.genre,
+        age_rating=payload.age_rating,
+    )
+    return MovieResponse.from_domain(movie)
+
+
+@admin_router.put("/{movie_id}", summary="Cập nhật phim (ADMIN)")
+def update_movie(
+    movie_id: UUID, payload: MovieUpdateRequest, actor: ActorDep, service: MovieServiceDep
+) -> MovieResponse:
+    movie = service.update_movie(
+        actor,
+        movie_id,
         title=payload.title,
         description=payload.description,
         duration_minutes=payload.duration_minutes,

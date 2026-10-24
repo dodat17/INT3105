@@ -104,3 +104,20 @@ def test_admin_lists_movies_in_admin_namespace(
         client.get("/api/v1/admin/movies", headers=auth_header(customer_token)).status_code == 403
     )
     assert client.get("/api/v1/admin/movies").status_code == 401
+
+
+def test_admin_updates_movie(client: TestClient, admin_token: str, customer_token: str) -> None:
+    movie = _create(client, admin_token).json()
+    url = f"/api/v1/admin/movies/{movie['id']}"
+    body = {"title": "Mai 2", "durationMinutes": 100, "description": "Phần hai."}
+
+    updated = client.put(url, json=body, headers=auth_header(admin_token))
+
+    assert updated.status_code == 200
+    assert updated.json() == {**movie, **body, "genre": "", "ageRating": ""}
+    assert client.get(f"/api/v1/movies/{movie['id']}").json() == updated.json()
+    assert client.put(url, json=body, headers=auth_header(customer_token)).status_code == 403
+    missing = f"/api/v1/admin/movies/{uuid4()}"
+    assert client.put(missing, json=body, headers=auth_header(admin_token)).status_code == 404
+    invalid = {**body, "durationMinutes": 0}
+    assert client.put(url, json=invalid, headers=auth_header(admin_token)).status_code == 400

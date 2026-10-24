@@ -77,3 +77,27 @@ def test_blank_search_means_no_filter(service: MovieService, uow: FakeUnitOfWork
     service.list_movies("   ", 1, 20)
 
     assert uow.movies.last_query is None
+
+
+def test_admin_updates_movie(service: MovieService) -> None:
+    movie = service.create_movie(ADMIN, **MOVIE)
+
+    updated = service.update_movie(ADMIN, movie.id, **{**MOVIE, "title": " Mai 2 "})
+
+    assert updated.title == "Mai 2"
+    assert service.get_movie(movie.id) == updated
+    with pytest.raises(ForbiddenError):
+        service.update_movie(CUSTOMER, movie.id, **MOVIE)
+    with pytest.raises(NotFoundError):
+        service.update_movie(ADMIN, uuid4(), **MOVIE)
+
+
+def test_scheduled_movie_keeps_its_duration(service: MovieService, uow: FakeUnitOfWork) -> None:
+    movie = service.create_movie(ADMIN, **MOVIE)
+    uow.showtimes.add(Showtime(uuid4(), movie.id, uuid4(), NOW, NOW + timedelta(hours=2), 90_000))
+
+    renamed = service.update_movie(ADMIN, movie.id, **{**MOVIE, "title": "Mai (2024)"})
+    with pytest.raises(BusinessRuleViolation):
+        service.update_movie(ADMIN, movie.id, **{**MOVIE, "duration_minutes": 90})
+
+    assert service.get_movie(movie.id) == renamed

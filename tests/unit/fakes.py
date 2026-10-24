@@ -54,6 +54,9 @@ class InMemoryMovies:
     def add(self, movie: Movie) -> None:
         self.rows[movie.id] = movie
 
+    def update(self, movie: Movie) -> None:
+        self.rows[movie.id] = movie
+
     def delete(self, movie_id: UUID) -> None:
         del self.rows[movie_id]
 
