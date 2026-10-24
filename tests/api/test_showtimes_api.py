@@ -136,3 +136,51 @@ def test_guest_sees_showtime_detail(
     assert body["currency"] == "VND"
     assert body["basePrice"] == 90000
     assert client.get(f"/api/v1/showtimes/{uuid4()}").status_code == 404
+
+
+def test_admin_updates_showtime(
+    client: TestClient, admin_token: str, customer_token: str, setup: dict[str, str]
+) -> None:
+    showtime = create_showtime(client, admin_token, setup, "2026-10-20T19:00:00+07:00").json()
+    url = f"/api/v1/admin/showtimes/{showtime['id']}"
+    body = {
+        "movieId": setup["movie"],
+        "auditoriumId": setup["other_room"],
+        "startsAt": "2026-10-20T20:00:00+07:00",
+        "basePrice": 100000,
+        "isOpenForBooking": False,
+    }
+
+    updated = client.put(url, json=body, headers=auth_header(admin_token))
+
+    assert updated.status_code == 200
+    assert updated.json()["startsAt"] == "2026-10-20T13:00:00Z"
+    assert updated.json()["endsAt"] == "2026-10-20T15:00:00Z"
+    assert updated.json()["auditoriumId"] == setup["other_room"]
+    assert updated.json()["isOpenForBooking"] is False
+    seats = client.get(f"/api/v1/showtimes/{showtime['id']}/seats").json()["seats"]
+    assert len(seats) == 1
+    assert client.put(url, json=body, headers=auth_header(customer_token)).status_code == 403
+    missing = f"/api/v1/admin/showtimes/{uuid4()}"
+    assert client.put(missing, json=body, headers=auth_header(admin_token)).status_code == 404
+
+
+def test_update_showtime_rejects_overlap(
+    client: TestClient, admin_token: str, setup: dict[str, str]
+) -> None:
+    create_showtime(client, admin_token, setup, "2026-10-20T19:00:00+07:00")
+    later = create_showtime(client, admin_token, setup, "2026-10-20T22:00:00+07:00").json()
+
+    response = client.put(
+        f"/api/v1/admin/showtimes/{later['id']}",
+        json={
+            "movieId": setup["movie"],
+            "auditoriumId": setup["room"],
+            "startsAt": "2026-10-20T20:00:00+07:00",
+            "basePrice": 90000,
+        },
+        headers=auth_header(admin_token),
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "SHOWTIME_OVERLAP"

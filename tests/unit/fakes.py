@@ -136,6 +136,9 @@ class InMemoryShowtimes:
     def add(self, showtime: Showtime) -> None:
         self.rows[showtime.id] = showtime
 
+    def update(self, showtime: Showtime) -> None:
+        self.rows[showtime.id] = showtime
+
     def delete(self, showtime_id: UUID) -> None:
         del self.rows[showtime_id]
 
@@ -174,6 +177,9 @@ class InMemoryBookings:
             and (showtime_id is None or b.showtime_id == showtime_id)
         )
 
+    def exists_for_showtime(self, showtime_id: UUID) -> bool:
+        return any(b.showtime_id == showtime_id for b in self.rows.values())
+
     def add(self, booking: Booking) -> None:
         self.rows[booking.id] = booking
 
@@ -190,6 +196,10 @@ class InMemoryInventory:
             self.rows[(showtime_id, seat.id)] = InventorySeat(
                 seat, InventoryState.AVAILABLE, None, None
             )
+
+    def reset(self, showtime_id: UUID, seats: list[Seat]) -> None:
+        self.rows = {key: row for key, row in self.rows.items() if key[0] != showtime_id}
+        self.initialize(showtime_id, seats)
 
     def lock(self, showtime_id: UUID, seat_ids: list[UUID]) -> list[InventorySeat]:
         return [

@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.domain.auth.model import Actor, Role
+from app.domain.booking.model import Booking, BookingStatus
 from app.domain.catalog.model import Movie
 from app.domain.cinema.model import Room, SeatType, generate_seats
 from app.domain.errors import (
@@ -167,3 +168,71 @@ def test_get_showtime_returns_movie_and_room(service: ShowtimeService, uow: Fake
     assert room.name == "Phòng 1"
     with pytest.raises(NotFoundError):
         service.get_showtime(uuid4())
+
+
+def _update(
+    service: ShowtimeService, showtime: Showtime, start: datetime, **overrides: object
+) -> Showtime:
+    fields: dict[str, object] = {
+        "movie_id": showtime.movie_id,
+        "room_id": showtime.room_id,
+        "starts_at": start,
+        "base_price": showtime.base_price,
+        "is_open_for_booking": True,
+        **overrides,
+    }
+    return service.update_showtime(ADMIN, showtime.id, **fields)  # type: ignore[arg-type]
+
+
+def test_update_moves_showtime_and_checks_overlap(
+    service: ShowtimeService, uow: FakeUnitOfWork
+) -> None:
+    first = _create(service, uow, at(0))
+    second = _create(service, uow, at(240))
+
+    moved = _update(service, first, at(30), base_price=100_000)
+
+    assert (moved.starts_at, moved.ends_at, moved.base_price) == (at(30), at(150), 100_000)
+    assert uow.showtimes.get(first.id) == moved
+    with pytest.raises(ShowtimeOverlapError):
+        _update(service, second, at(100))
+    with pytest.raises(NotFoundError):
+        service.update_showtime(
+            ADMIN,
+            uuid4(),
+            movie_id=first.movie_id,
+            room_id=first.room_id,
+            starts_at=at(0),
+            base_price=1,
+            is_open_for_booking=True,
+        )
+
+
+def test_update_to_other_room_rebuilds_inventory(
+    service: ShowtimeService, uow: FakeUnitOfWork
+) -> None:
+    showtime = _create(service, uow, at(0))
+    other_room = Room(uuid4(), "Phòng 3", 1, 3)
+    uow.rooms.add(other_room, generate_seats(other_room.id, 1, 3, set()))
+
+    _update(service, showtime, at(0), room_id=other_room.id)
+
+    inventory = {
+        seat_id for showtime_id, seat_id in uow.inventory.rows if showtime_id == showtime.id
+    }
+    assert inventory == {seat.id for seat in uow.rooms.seats(other_room.id)}
+
+
+def test_booked_showtime_only_changes_price_and_sale_flag(
+    service: ShowtimeService, uow: FakeUnitOfWork
+) -> None:
+    showtime = _create(service, uow, at(0))
+    uow.bookings.add(
+        Booking(uuid4(), uuid4(), showtime.id, BookingStatus.HELD, at(-60), at(-55), 0, [])
+    )
+
+    closed = _update(service, showtime, at(0), base_price=80_000, is_open_for_booking=False)
+
+    assert (closed.base_price, closed.is_open_for_booking) == (80_000, False)
+    with pytest.raises(BusinessRuleViolation):
+        _update(service, showtime, at(30))

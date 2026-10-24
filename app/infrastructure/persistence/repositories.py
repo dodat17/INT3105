@@ -313,6 +313,20 @@ class SqlAlchemyShowtimeRepository:
             )
         )
 
+    def update(self, showtime: Showtime) -> None:
+        self._session.execute(
+            update(ShowtimeModel)
+            .where(ShowtimeModel.id == showtime.id)
+            .values(
+                movie_id=showtime.movie_id,
+                room_id=showtime.room_id,
+                starts_at=_to_db(showtime.starts_at),
+                ends_at=_to_db(showtime.ends_at),
+                base_price=showtime.base_price,
+                is_open_for_booking=showtime.is_open_for_booking,
+            )
+        )
+
     def delete(self, showtime_id: UUID) -> None:
         self._session.execute(delete(ShowtimeModel).where(ShowtimeModel.id == showtime_id))
 
@@ -409,6 +423,11 @@ class SqlAlchemyBookingRepository:
             stmt = stmt.where(BookingModel.showtime_id == showtime_id)
         return int(self._session.scalar(stmt) or 0)
 
+    def exists_for_showtime(self, showtime_id: UUID) -> bool:
+        return bool(
+            self._session.scalar(select(exists().where(BookingModel.showtime_id == showtime_id)))
+        )
+
     def add(self, booking: Booking) -> None:
         self._session.add(
             BookingModel(
@@ -463,6 +482,12 @@ class SqlAlchemySeatInventoryRepository:
             )
             for seat in seats
         )
+
+    def reset(self, showtime_id: UUID, seats: list[Seat]) -> None:
+        self._session.execute(
+            delete(ShowtimeSeatModel).where(ShowtimeSeatModel.showtime_id == showtime_id)
+        )
+        self.initialize(showtime_id, seats)
 
     def lock(self, showtime_id: UUID, seat_ids: list[UUID]) -> list[InventorySeat]:
         rows = self._session.execute(

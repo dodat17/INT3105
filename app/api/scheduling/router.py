@@ -22,6 +22,10 @@ class ShowtimeCreateRequest(RequestModel):
     base_price: Annotated[int, Field(gt=0, le=10_000_000, description="Giá ghế thường, VND")]
 
 
+class ShowtimeUpdateRequest(ShowtimeCreateRequest):
+    is_open_for_booking: bool = True
+
+
 class ShowtimeResponse(CamelModel):
     id: UUID
     movie_id: UUID
@@ -139,6 +143,25 @@ def create_showtime(
         room_id=payload.auditorium_id,
         starts_at=payload.starts_at,
         base_price=payload.base_price,
+    )
+    return ShowtimeResponse.from_domain(showtime)
+
+
+@admin_router.put("/{showtime_id}", summary="Cập nhật suất chiếu (ADMIN)")
+def update_showtime(
+    showtime_id: UUID,
+    payload: ShowtimeUpdateRequest,
+    actor: ActorDep,
+    service: ShowtimeServiceDep,
+) -> ShowtimeResponse:
+    showtime = service.update_showtime(
+        actor,
+        showtime_id,
+        movie_id=payload.movie_id,
+        room_id=payload.auditorium_id,
+        starts_at=payload.starts_at,
+        base_price=payload.base_price,
+        is_open_for_booking=payload.is_open_for_booking,
     )
     return ShowtimeResponse.from_domain(showtime)
 
