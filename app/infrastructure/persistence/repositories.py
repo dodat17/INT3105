@@ -209,6 +209,21 @@ class SqlAlchemyRoomRepository:
             self._session.flush()
         except IntegrityError as exc:
             raise RoomNameAlreadyUsedError from exc
+        self._add_seats(seats)
+
+    def update(self, room: Room, seats: list[Seat]) -> None:
+        self._session.execute(delete(SeatModel).where(SeatModel.room_id == room.id))
+        try:
+            self._session.execute(
+                update(RoomModel)
+                .where(RoomModel.id == room.id)
+                .values(name=room.name, rows=room.rows, cols=room.cols)
+            )
+        except IntegrityError as exc:
+            raise RoomNameAlreadyUsedError from exc
+        self._add_seats(seats)
+
+    def _add_seats(self, seats: list[Seat]) -> None:
         self._session.add_all(
             SeatModel(
                 id=seat.id,
@@ -281,6 +296,9 @@ class SqlAlchemyShowtimeRepository:
         return bool(
             self._session.scalar(select(exists().where(ShowtimeModel.movie_id == movie_id)))
         )
+
+    def exists_for_room(self, room_id: UUID) -> bool:
+        return bool(self._session.scalar(select(exists().where(ShowtimeModel.room_id == room_id))))
 
     def add(self, showtime: Showtime) -> None:
         self._session.add(

@@ -82,6 +82,9 @@ class InMemoryRooms:
         self.rows[room.id] = room
         self.seat_rows[room.id] = seats
 
+    def update(self, room: Room, seats: list[Seat]) -> None:
+        self.add(room, seats)
+
     def seats(self, room_id: UUID) -> list[Seat]:
         return sorted(self.seat_rows.get(room_id, []), key=lambda s: (s.row_label, s.number))
 
@@ -126,6 +129,9 @@ class InMemoryShowtimes:
 
     def exists_for_movie(self, movie_id: UUID) -> bool:
         return any(s.movie_id == movie_id for s in self.rows.values())
+
+    def exists_for_room(self, room_id: UUID) -> bool:
+        return any(s.room_id == room_id for s in self.rows.values())
 
     def add(self, showtime: Showtime) -> None:
         self.rows[showtime.id] = showtime
