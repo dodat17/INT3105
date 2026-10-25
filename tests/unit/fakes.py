@@ -153,12 +153,24 @@ class InMemoryBookings:
     def list_for_user(
         self, user_id: UUID, status: BookingStatus | None, now: datetime, page: int, page_size: int
     ) -> Page[Booking]:
+        return self.search(user_id, None, status, now, page, page_size)
+
+    def search(
+        self,
+        user_id: UUID | None,
+        showtime_id: UUID | None,
+        status: BookingStatus | None,
+        now: datetime,
+        page: int,
+        page_size: int,
+    ) -> Page[Booking]:
         found = [
             b
             if effective_status(b.status, b.expires_at, now) is b.status
             else b.with_status(BookingStatus.EXPIRED)
             for b in self.rows.values()
-            if b.user_id == user_id
+            if (user_id is None or b.user_id == user_id)
+            and (showtime_id is None or b.showtime_id == showtime_id)
         ]
         if status is not None:
             found = [b for b in found if b.status is status]

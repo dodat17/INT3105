@@ -2,7 +2,7 @@ from datetime import timedelta
 from secrets import token_hex
 from uuid import UUID, uuid4
 
-from app.domain.auth.model import Actor, Role
+from app.domain.auth.model import Actor, Role, require_admin
 from app.domain.booking.model import (
     Booking,
     BookingDetails,
@@ -136,7 +136,34 @@ class BookingService:
         return booking if status is booking.status else booking.with_status(status)
 
     def details(self, actor: Actor, booking_id: UUID) -> BookingDetails:
-        booking = self.get(actor, booking_id)
+        return self._details(self.get(actor, booking_id))
+
+    def admin_details(self, actor: Actor, booking_id: UUID) -> BookingDetails:
+        require_admin(actor)
+        with self._uow_factory() as uow:
+            booking = uow.bookings.get(booking_id)
+            if booking is None:
+                raise NotFoundError
+            now = uow.clock.now()
+        status = effective_status(booking.status, booking.expires_at, now)
+        return self._details(booking if status is booking.status else booking.with_status(status))
+
+    def admin_list(
+        self,
+        actor: Actor,
+        *,
+        user_id: UUID | None,
+        showtime_id: UUID | None,
+        status: BookingStatus | None,
+        page: int,
+        page_size: int,
+    ) -> Page[Booking]:
+        require_admin(actor)
+        with self._uow_factory() as uow:
+            now = uow.clock.now()
+            return uow.bookings.search(user_id, showtime_id, status, now, page, page_size)
+
+    def _details(self, booking: Booking) -> BookingDetails:
         with self._uow_factory() as uow:
             showtime = uow.showtimes.get(booking.showtime_id)
             if showtime is None:

@@ -375,7 +375,22 @@ class SqlAlchemyBookingRepository:
     def list_for_user(
         self, user_id: UUID, status: BookingStatus | None, now: datetime, page: int, page_size: int
     ) -> Page[Booking]:
-        stmt = select(BookingModel).where(BookingModel.user_id == user_id)
+        return self.search(user_id, None, status, now, page, page_size)
+
+    def search(
+        self,
+        user_id: UUID | None,
+        showtime_id: UUID | None,
+        status: BookingStatus | None,
+        now: datetime,
+        page: int,
+        page_size: int,
+    ) -> Page[Booking]:
+        stmt = select(BookingModel)
+        if user_id is not None:
+            stmt = stmt.where(BookingModel.user_id == user_id)
+        if showtime_id is not None:
+            stmt = stmt.where(BookingModel.showtime_id == showtime_id)
         decision_instant = _to_db(now)
         if status is BookingStatus.HELD:
             stmt = stmt.where(

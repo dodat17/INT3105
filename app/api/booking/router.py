@@ -9,10 +9,11 @@ from app.api.common.auth import ActorDep
 from app.api.common.schemas import CamelModel, PageResponse, RequestModel
 from app.api.dependencies import BookingServiceDep
 from app.api.scheduling.router import AuditoriumRef, MovieRef
-from app.domain.booking.model import Booking, BookingStatus
+from app.domain.booking.model import Booking, BookingDetails, BookingStatus
 from app.domain.cinema.model import SeatType
 
 router = APIRouter(tags=["booking"])
+admin_router = APIRouter(prefix="/admin/bookings", tags=["admin"])
 
 
 class CreateBookingRequest(RequestModel):
@@ -89,6 +90,47 @@ class BookingDetailResponse(BookingResponse):
     seats: list[BookingSeatResponse]
 
 
+class AdminBookingResponse(BookingResponse):
+    user_id: UUID
+
+    @classmethod
+    def from_booking(cls, booking: Booking) -> "AdminBookingResponse":
+        return cls(**BookingResponse.from_domain(booking).model_dump(), user_id=booking.user_id)
+
+
+class AdminBookingDetailResponse(BookingDetailResponse):
+    user_id: UUID
+
+
+def _detail_response(details: BookingDetails) -> BookingDetailResponse:
+    booking = BookingResponse.from_domain(details.booking)
+    movie = MovieRef(id=details.movie.id, title=details.movie.title)
+    auditorium = AuditoriumRef(id=details.room.id, name=details.room.name)
+    return BookingDetailResponse(
+        **booking.model_dump(),
+        movie=movie,
+        auditorium=auditorium,
+        showtime=ShowtimeRef(
+            id=details.showtime.id,
+            movie=movie,
+            auditorium=auditorium,
+            starts_at=details.showtime.starts_at,
+            ends_at=details.showtime.ends_at,
+            ticket_price=details.showtime.base_price,
+            is_open_for_booking=details.showtime.is_open_for_booking,
+        ),
+        seats=[
+            BookingSeatResponse(
+                seat_id=item.seat_id,
+                row_label=item.row_label,
+                seat_number=item.number,
+                unit_price=item.unit_price,
+            )
+            for item in details.booking.items
+        ],
+    )
+
+
 @router.post("/bookings", status_code=201, summary="Giữ ghế")
 def create_booking(
     payload: CreateBookingRequest, actor: ActorDep, service: BookingServiceDep, response: Response
@@ -119,33 +161,7 @@ def list_bookings(
 def get_booking(
     booking_id: UUID, actor: ActorDep, service: BookingServiceDep
 ) -> BookingDetailResponse:
-    details = service.details(actor, booking_id)
-    booking = BookingResponse.from_domain(details.booking)
-    movie = MovieRef(id=details.movie.id, title=details.movie.title)
-    auditorium = AuditoriumRef(id=details.room.id, name=details.room.name)
-    return BookingDetailResponse(
-        **booking.model_dump(),
-        movie=movie,
-        auditorium=auditorium,
-        showtime=ShowtimeRef(
-            id=details.showtime.id,
-            movie=movie,
-            auditorium=auditorium,
-            starts_at=details.showtime.starts_at,
-            ends_at=details.showtime.ends_at,
-            ticket_price=details.showtime.base_price,
-            is_open_for_booking=details.showtime.is_open_for_booking,
-        ),
-        seats=[
-            BookingSeatResponse(
-                seat_id=item.seat_id,
-                row_label=item.row_label,
-                seat_number=item.number,
-                unit_price=item.unit_price,
-            )
-            for item in details.booking.items
-        ],
-    )
+    return _detail_response(service.details(actor, booking_id))
 
 
 @router.post("/bookings/{booking_id}/confirm", summary="Xác nhận booking")
@@ -159,3 +175,39 @@ def confirm_booking(
 def cancel_booking(booking_id: UUID, actor: ActorDep, service: BookingServiceDep) -> Response:
     service.cancel(actor, booking_id)
     return Response(status_code=204)
+
+
+@admin_router.get("", summary="Tra cứu booking (ADMIN)")
+def admin_list_bookings(
+    actor: ActorDep,
+    service: BookingServiceDep,
+    status: Annotated[BookingStatus | None, Query()] = None,
+    user_id: Annotated[UUID | None, Query(alias="userId")] = None,
+    showtime_id: Annotated[UUID | None, Query(alias="showtimeId")] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
+) -> PageResponse[AdminBookingResponse]:
+    result = service.admin_list(
+        actor,
+        user_id=user_id,
+        showtime_id=showtime_id,
+        status=status,
+        page=page,
+        page_size=page_size,
+    )
+    return PageResponse[AdminBookingResponse](
+        items=[AdminBookingResponse.from_booking(item) for item in result.items],
+        page=result.page,
+        page_size=result.page_size,
+        total_items=result.total_items,
+    )
+
+
+@admin_router.get("/{booking_id}", summary="Chi tiết booking bất kỳ (ADMIN)")
+def admin_get_booking(
+    booking_id: UUID, actor: ActorDep, service: BookingServiceDep
+) -> AdminBookingDetailResponse:
+    details = service.admin_details(actor, booking_id)
+    return AdminBookingDetailResponse(
+        **_detail_response(details).model_dump(), user_id=details.booking.user_id
+    )

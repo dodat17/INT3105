@@ -70,6 +70,15 @@ class BookingRepository(Protocol):
     def list_for_user(
         self, user_id: UUID, status: BookingStatus | None, now: datetime, page: int, page_size: int
     ) -> Page[Booking]: ...
+    def search(
+        self,
+        user_id: UUID | None,
+        showtime_id: UUID | None,
+        status: BookingStatus | None,
+        now: datetime,
+        page: int,
+        page_size: int,
+    ) -> Page[Booking]: ...
     def count_effective_holds(
         self, user_id: UUID, now: datetime, showtime_id: UUID | None = None
     ) -> int: ...

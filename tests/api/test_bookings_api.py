@@ -332,3 +332,42 @@ def test_booking_rejects_invalid_seat_sets_and_started_showtime(
     )
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "SHOWTIME_NOT_BOOKABLE"
+
+
+def test_admin_looks_up_any_booking(
+    client: TestClient, admin_token: str, customer_token: str, setup: dict[str, str]
+) -> None:
+    showtime_id, seats = _showtime_and_seats(client, admin_token, setup)
+    booking = client.post(
+        "/api/v1/bookings",
+        json={"showtimeId": showtime_id, "seatIds": seats[:1]},
+        headers=auth_header(customer_token),
+    ).json()
+    user_id = client.get("/api/v1/auth/me", headers=auth_header(customer_token)).json()["id"]
+
+    listing = client.get(
+        "/api/v1/admin/bookings",
+        params={"showtimeId": showtime_id, "status": "HELD"},
+        headers=auth_header(admin_token),
+    )
+    other_user = client.get(
+        "/api/v1/admin/bookings",
+        params={"userId": setup["movie"]},
+        headers=auth_header(admin_token),
+    )
+    detail = client.get(f"/api/v1/admin/bookings/{booking['id']}", headers=auth_header(admin_token))
+
+    assert listing.status_code == 200
+    assert [item["id"] for item in listing.json()["items"]] == [booking["id"]]
+    assert listing.json()["items"][0]["userId"] == user_id
+    assert other_user.json()["totalItems"] == 0
+    assert detail.status_code == 200
+    assert detail.json()["userId"] == user_id
+    assert detail.json()["auditorium"]["id"] == setup["room"]
+    customer = auth_header(customer_token)
+    assert client.get("/api/v1/admin/bookings", headers=customer).status_code == 403
+    assert (
+        client.get(f"/api/v1/admin/bookings/{booking['id']}", headers=customer).status_code == 403
+    )
+    missing = f"/api/v1/admin/bookings/{setup['movie']}"
+    assert client.get(missing, headers=auth_header(admin_token)).status_code == 404
