@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.api.common.errors import error_response
+from app.api.common.schemas import ErrorResponse
 
 router = APIRouter(tags=["ops"])
 
@@ -30,7 +31,9 @@ def health() -> HealthResponse:
 @router.get(
     "/health/ready",
     response_model=ReadinessResponse,
-    responses={503: {"description": "DB lỗi hoặc schema chưa ở migration mới nhất"}},
+    responses={
+        503: {"model": ErrorResponse, "description": "DB lỗi hoặc schema chưa ở migration mới nhất"}
+    },
 )
 def ready(request: Request) -> ReadinessResponse | JSONResponse:
     readiness = cast(Callable[[], dict[str, bool]], request.app.state.readiness)

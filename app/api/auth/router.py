@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query, Response
 from pydantic import StringConstraints
 
 from app.api.common.auth import ActorDep
-from app.api.common.schemas import CamelModel, PageResponse, RequestModel
+from app.api.common.schemas import CONFLICT, CamelModel, PageResponse, RequestModel
 from app.api.dependencies import AuthServiceDep
 from app.domain.auth.model import Role, User
 
@@ -67,7 +67,7 @@ class UserResponse(CamelModel):
         )
 
 
-@router.post("/register", status_code=201, summary="Đăng ký tài khoản CUSTOMER")
+@router.post("/register", status_code=201, summary="Đăng ký tài khoản CUSTOMER", responses=CONFLICT)
 def register(payload: RegisterRequest, service: AuthServiceDep) -> UserResponse:
     user = service.register(payload.email, payload.password, payload.full_name)
     return UserResponse.from_domain(user)

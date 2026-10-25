@@ -6,7 +6,13 @@ from fastapi import APIRouter, Query, Response
 from pydantic import Field
 
 from app.api.common.auth import ActorDep
-from app.api.common.schemas import CamelModel, PageResponse, RequestModel
+from app.api.common.schemas import (
+    CONFLICT,
+    CUSTOMER_ONLY,
+    CamelModel,
+    PageResponse,
+    RequestModel,
+)
 from app.api.dependencies import BookingServiceDep
 from app.api.scheduling.router import AuditoriumRef, MovieRef
 from app.domain.booking.model import Booking, BookingDetails, BookingStatus
@@ -131,7 +137,9 @@ def _detail_response(details: BookingDetails) -> BookingDetailResponse:
     )
 
 
-@router.post("/bookings", status_code=201, summary="Giữ ghế")
+@router.post(
+    "/bookings", status_code=201, summary="Giữ ghế", responses={**CONFLICT, **CUSTOMER_ONLY}
+)
 def create_booking(
     payload: CreateBookingRequest, actor: ActorDep, service: BookingServiceDep, response: Response
 ) -> BookingResponse:
@@ -140,7 +148,7 @@ def create_booking(
     return BookingResponse.from_domain(booking)
 
 
-@router.get("/me/bookings", summary="Booking của tôi")
+@router.get("/me/bookings", summary="Booking của tôi", responses=CUSTOMER_ONLY)
 def list_bookings(
     actor: ActorDep,
     service: BookingServiceDep,
@@ -164,14 +172,14 @@ def get_booking(
     return _detail_response(service.details(actor, booking_id))
 
 
-@router.post("/bookings/{booking_id}/confirm", summary="Xác nhận booking")
+@router.post("/bookings/{booking_id}/confirm", summary="Xác nhận booking", responses=CONFLICT)
 def confirm_booking(
     booking_id: UUID, actor: ActorDep, service: BookingServiceDep
 ) -> BookingResponse:
     return BookingResponse.from_domain(service.confirm(actor, booking_id))
 
 
-@router.delete("/bookings/{booking_id}", status_code=204, summary="Hủy hold")
+@router.delete("/bookings/{booking_id}", status_code=204, summary="Hủy hold", responses=CONFLICT)
 def cancel_booking(booking_id: UUID, actor: ActorDep, service: BookingServiceDep) -> Response:
     service.cancel(actor, booking_id)
     return Response(status_code=204)

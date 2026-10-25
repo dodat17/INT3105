@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from pydantic import Field, StringConstraints
 
 from app.api.common.auth import ActorDep
-from app.api.common.schemas import CamelModel, RequestModel
+from app.api.common.schemas import CONFLICT, CamelModel, RequestModel
 from app.api.dependencies import RoomServiceDep
 from app.domain.cinema.model import MAX_COLS, MAX_ROWS, Room, Seat, SeatType
 
@@ -63,7 +63,7 @@ def list_auditoriums(actor: ActorDep, service: RoomServiceDep) -> list[Auditoriu
     return [AuditoriumResponse.from_domain(room) for room in service.list_rooms(actor)]
 
 
-@router.post("", status_code=201, summary="Tạo phòng chiếu và sinh ghế (ADMIN)")
+@router.post("", status_code=201, summary="Tạo phòng chiếu và sinh ghế (ADMIN)", responses=CONFLICT)
 def create_auditorium(
     payload: AuditoriumCreateRequest, actor: ActorDep, service: RoomServiceDep
 ) -> AuditoriumResponse:
@@ -85,7 +85,11 @@ def get_auditorium(
     return AuditoriumDetailResponse.from_seats(room, seats)
 
 
-@router.put("/{auditorium_id}", summary="Cập nhật phòng chiếu chưa có suất chiếu (ADMIN)")
+@router.put(
+    "/{auditorium_id}",
+    summary="Cập nhật phòng chiếu chưa có suất chiếu (ADMIN)",
+    responses=CONFLICT,
+)
 def update_auditorium(
     auditorium_id: UUID,
     payload: AuditoriumUpdateRequest,

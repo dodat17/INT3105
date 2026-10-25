@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query, Response
 from pydantic import AwareDatetime, Field
 
 from app.api.common.auth import ActorDep
-from app.api.common.schemas import CamelModel, PageResponse, RequestModel
+from app.api.common.schemas import CONFLICT, CamelModel, PageResponse, RequestModel
 from app.api.dependencies import ShowtimeServiceDep
 from app.domain.cinema.model import SeatType
 from app.domain.scheduling.model import SeatMapEntry, SeatStatus, Showtime
@@ -133,7 +133,7 @@ def seat_map(showtime_id: UUID, service: ShowtimeServiceDep) -> SeatMapResponse:
     )
 
 
-@admin_router.post("", status_code=201, summary="Tạo suất chiếu (ADMIN)")
+@admin_router.post("", status_code=201, summary="Tạo suất chiếu (ADMIN)", responses=CONFLICT)
 def create_showtime(
     payload: ShowtimeCreateRequest, actor: ActorDep, service: ShowtimeServiceDep
 ) -> ShowtimeResponse:
@@ -147,7 +147,7 @@ def create_showtime(
     return ShowtimeResponse.from_domain(showtime)
 
 
-@admin_router.put("/{showtime_id}", summary="Cập nhật suất chiếu (ADMIN)")
+@admin_router.put("/{showtime_id}", summary="Cập nhật suất chiếu (ADMIN)", responses=CONFLICT)
 def update_showtime(
     showtime_id: UUID,
     payload: ShowtimeUpdateRequest,

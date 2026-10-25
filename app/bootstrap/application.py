@@ -13,6 +13,7 @@ from starlette.types import Scope
 
 from app.api.common.auth import AuthMiddleware
 from app.api.common.errors import register_exception_handlers
+from app.api.common.openapi import install_error_responses
 from app.api.common.request_body import RequestBodyMiddleware
 from app.api.common.request_id import RequestIdMiddleware
 from app.api.common.security_headers import SecurityHeadersMiddleware
@@ -75,6 +76,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestIdMiddleware)
     register_exception_handlers(app)
+    install_error_responses(app)
     app.include_router(root_router)
     known_routes = list(app.router.routes)
 
