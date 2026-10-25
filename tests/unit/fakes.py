@@ -32,10 +32,26 @@ class InMemoryUsers:
     def get_by_email(self, email: str) -> User | None:
         return next((u for u in self.rows.values() if u.email == email), None)
 
+    def search(self, query: str | None, role: Role | None, page: int, page_size: int) -> Page[User]:
+        found = [
+            u
+            for u in self.rows.values()
+            if (not query or query.lower() in f"{u.email} {u.full_name}".lower())
+            and (role is None or u.role is role)
+        ]
+        start = (page - 1) * page_size
+        return Page(found[start : start + page_size], page, page_size, len(found))
+
     def add(self, user: User) -> None:
         if self.get_by_email(user.email):
             raise EmailAlreadyUsedError
         self.rows[user.id] = user
+
+    def update(self, user: User) -> None:
+        self.rows[user.id] = user
+
+    def delete(self, user_id: UUID) -> None:
+        del self.rows[user_id]
 
 
 class InMemoryMovies:
@@ -191,6 +207,9 @@ class InMemoryBookings:
 
     def exists_for_showtime(self, showtime_id: UUID) -> bool:
         return any(b.showtime_id == showtime_id for b in self.rows.values())
+
+    def exists_for_user(self, user_id: UUID) -> bool:
+        return any(b.user_id == user_id for b in self.rows.values())
 
     def add(self, booking: Booking) -> None:
         self.rows[booking.id] = booking

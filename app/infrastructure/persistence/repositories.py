@@ -81,6 +81,30 @@ class SqlAlchemyUserRepository:
         row = self._session.scalar(select(UserModel).where(UserModel.email == email))
         return _to_user(row) if row else None
 
+    def search(self, query: str | None, role: Role | None, page: int, page_size: int) -> Page[User]:
+        stmt = select(UserModel)
+        if query:
+            stmt = stmt.where(
+                or_(
+                    UserModel.email.icontains(query, autoescape=True),
+                    UserModel.full_name.icontains(query, autoescape=True),
+                )
+            )
+        if role is not None:
+            stmt = stmt.where(UserModel.role == role.value)
+        total = self._session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+        rows = self._session.scalars(
+            stmt.order_by(UserModel.created_at, UserModel.id)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        return Page(
+            items=[_to_user(row) for row in rows],
+            page=page,
+            page_size=page_size,
+            total_items=total,
+        )
+
     def add(self, user: User) -> None:
         self._session.add(
             UserModel(
@@ -97,6 +121,16 @@ class SqlAlchemyUserRepository:
             self._session.flush()
         except IntegrityError as exc:
             raise EmailAlreadyUsedError from exc
+
+    def update(self, user: User) -> None:
+        self._session.execute(
+            update(UserModel)
+            .where(UserModel.id == user.id)
+            .values(full_name=user.full_name, role=user.role.value)
+        )
+
+    def delete(self, user_id: UUID) -> None:
+        self._session.execute(delete(UserModel).where(UserModel.id == user_id))
 
 
 class SqlAlchemyMovieRepository:
@@ -442,6 +476,9 @@ class SqlAlchemyBookingRepository:
         return bool(
             self._session.scalar(select(exists().where(BookingModel.showtime_id == showtime_id)))
         )
+
+    def exists_for_user(self, user_id: UUID) -> bool:
+        return bool(self._session.scalar(select(exists().where(BookingModel.user_id == user_id))))
 
     def add(self, booking: Booking) -> None:
         self._session.add(
