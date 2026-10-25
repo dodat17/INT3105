@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.bootstrap.application import create_app
+from scripts.export_openapi import OPENAPI_FILE, render
 
 
 def _operations() -> list[tuple[str, str, dict[str, dict[str, object]]]]:
@@ -34,3 +35,8 @@ def test_openapi_error_responses_use_shared_envelope() -> None:
         schema = response["content"]["application/json"]["schema"]  # type: ignore[index]
         assert schema == {"$ref": "#/components/schemas/ErrorResponse"}
     assert {"400", "401", "403", "413", "415"} <= by_key[("post", "/api/v1/bookings")].keys()
+
+
+def test_committed_openapi_matches_runtime() -> None:
+    # Regenerate with: uv run python scripts/export_openapi.py
+    assert OPENAPI_FILE.read_text(encoding="utf-8") == render()

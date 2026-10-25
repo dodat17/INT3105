@@ -31,6 +31,16 @@ from app.infrastructure.persistence.uow import SqlAlchemyUnitOfWork, create_sess
 from app.infrastructure.security.passwords import BcryptPasswordHasher
 from app.infrastructure.security.tokens import JwtTokenService
 
+API_DESCRIPTION = """Hợp đồng API cho dịch vụ đặt vé xem phim, đối chiếu mục 6 của requirements.md.
+
+**Xác nhận đặt vé là mô phỏng.** `POST /api/v1/bookings/{bookingId}/confirm` không thực hiện
+thanh toán và không được hiểu là "thanh toán thành công".
+
+Mọi mốc thời gian lưu ở UTC và trả ở ISO 8601 có timezone. Giá trị tiền là số nguyên VND.
+Mọi lỗi JSON có dạng `{"error": {"code", "message", "requestId", "details?"}}`.
+Endpoint dưới `/api/v1/admin/` yêu cầu token của tài khoản ADMIN.
+"""
+
 
 class SpaStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope: Scope) -> Response:
@@ -56,7 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     uow_factory = cast(UnitOfWorkFactory, partial(SqlAlchemyUnitOfWork, session_factory))
     tokens = JwtTokenService(settings.jwt_secret, settings.jwt_algorithm, settings.jwt_ttl_seconds)
 
-    app = FastAPI(title=settings.app_name, version="0.1.0")
+    app = FastAPI(title=settings.app_name, version="0.1.0", description=API_DESCRIPTION)
     app.state.readiness = DatabaseReadiness(session_factory)
     app.state.auth_service = AuthService(
         uow_factory, BcryptPasswordHasher(settings.bcrypt_rounds), tokens, SystemClock()

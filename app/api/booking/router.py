@@ -172,7 +172,15 @@ def get_booking(
     return _detail_response(service.details(actor, booking_id))
 
 
-@router.post("/bookings/{booking_id}/confirm", summary="Xác nhận booking", responses=CONFLICT)
+@router.post(
+    "/bookings/{booking_id}/confirm",
+    summary="Xác nhận booking (mô phỏng, không thanh toán)",
+    description=(
+        "FR-06. Không phải thanh toán, không có body. Booking đã CONFIRMED trả lại 200 "
+        "với thông tin cũ (idempotent)."
+    ),
+    responses=CONFLICT,
+)
 def confirm_booking(
     booking_id: UUID, actor: ActorDep, service: BookingServiceDep
 ) -> BookingResponse:
