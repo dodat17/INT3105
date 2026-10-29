@@ -14,7 +14,7 @@ uv run python scripts/seed.py    # ADMIN, phim, phòng, suất chiếu mẫu; ch
 uv run uvicorn app.main:app --reload --port 8080
 ```
 
-Kiểm tra `http://localhost:8080/health`. Swagger ở `http://localhost:8080/docs`: gọi
+Kiểm tra `http://localhost:8080/health/live`. Swagger ở `http://localhost:8080/docs`: gọi
 `POST /api/v1/auth/login`, sao chép `accessToken` rồi bấm **Authorize**.
 
 Tài khoản ADMIN mặc định của seed (chỉ dùng cho development): `admin@example.test` /

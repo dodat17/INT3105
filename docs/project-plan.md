@@ -1,6 +1,6 @@
 # Kế hoạch thực hiện
 
-Chi tiết hóa các mốc M1–M6 ở mục 12.3 của [requirements.md](./requirements.md) thành công việc có điều kiện hoàn thành kiểm chứng được.
+Chi tiết hóa các mốc M1–M6 ở mục 5.2 của [requirements.md](./requirements.md) thành công việc có điều kiện hoàn thành kiểm chứng được.
 
 ## 1. Nguyên tắc sắp xếp thứ tự
 
@@ -8,7 +8,7 @@ Thứ tự dưới đây không theo độ dễ mà theo **rủi ro**. Ba việc
 
 | Việc | Bị kéo lên vì |
 |---|---|
-| Kiểm chứng môi trường Kaggle | RI-02: nếu Internet bị tắt và không mở được, toàn bộ mục 10 sụp đổ. Phát hiện ở M1 còn xoay được; phát hiện ở M4 thì không |
+| Kiểm chứng môi trường Kaggle | RI-02: nếu Internet bị tắt và không mở được, toàn bộ mục 6.2 của đặc tả sụp đổ. Phát hiện ở M1 còn xoay được; phát hiện ở M4 thì không |
 | Kiểm thử phụ thuộc kiến trúc (import-linter) | RI-07: ranh giới kiến trúc bị vi phạm dần. Thêm ở M2 tốn một buổi; retrofit ở M6 là viết lại |
 | `T-07`, `T-08`, `T-25` | RI-05: nếu cơ chế chống tranh chấp sai, sửa nó kéo theo đổi schema và viết lại kiểm thử. Phải biết sớm nhất có thể |
 
@@ -43,7 +43,7 @@ Thứ tự dưới đây không theo độ dễ mà theo **rủi ro**. Ba việc
 | **import-linter trong CI** | `T-28` xanh và thực sự fail khi cố tình vi phạm |
 | Seed 10 phim / 3 phòng / 60 suất / 200 tài khoản, có `showtime_seat` đầy đủ | `scripts/seed.sh` chạy xác định theo `SEED_RANDOM_SEED` |
 | FastAPI OpenAPI + Swagger UI, đối chiếu `docs/api/openapi.yaml` | `/openapi.json` khớp spec đã commit |
-| Hợp đồng lỗi mục 6.4, `requestId` xuyên suốt | `T-27` xanh; `NFR-07` kiểm được trong smoke test |
+| Hợp đồng lỗi mục 3.1, `requestId` xuyên suốt | `T-27` xanh; `NFR-07` kiểm được trong smoke test |
 
 **Điều kiện hoàn thành**
 
@@ -91,14 +91,14 @@ Mốc nặng nhất và rủi ro nhất.
 - [ ] Số liệu **thực sự chạy trên Kaggle CPU**, không phải kết quả local báo cáo thay
 - [ ] `NFR-01`: 0 vi phạm bất biến ở mọi mức tải
 - [ ] `NFR-02`: dưới 1% `5xx`+timeout ở L-01, L-02, L-03, L-05, L-06
-- [ ] Toàn bộ 8 mục trong danh sách kiểm tra ở mục 9.2 đặc tả được tick
+- [ ] Toàn bộ 8 mục trong danh sách kiểm tra ở mục 6.4 đặc tả được tick
 - [ ] Đã ghi rõ CPU của k6 và liệu client có phải điểm nghẽn không
 
 ## 6. M5 — Cải tiến Pha 2
 
 | Việc | Kết quả |
 |---|---|
-| Chọn một hướng cải tiến từ mục 11.2 dựa trên **số liệu**, không dựa trên linh cảm | Giả thuyết viết ra trước khi code |
+| Chọn một hướng cải tiến từ mục 6.3 của đặc tả dựa trên **số liệu**, không dựa trên linh cảm | Giả thuyết viết ra trước khi code |
 | Chốt ngưỡng đánh giá chính trước khi chạy so sánh | Ghi trong ADR |
 | ADR-0006+ với sơ đồ trước/sau và cách giữ nguyên bất biến | `docs/adr/` |
 | Triển khai và chạy lại **toàn bộ** kiểm thử correctness | `T-01`…`T-29` (+ `T-30` nếu có cache) xanh |
@@ -116,7 +116,7 @@ Mốc nặng nhất và rủi ro nhất.
 
 | Việc | Kết quả |
 |---|---|
-| README đủ các mục 12.2, gồm giả định và rủi ro còn hiệu lực | `README.md` |
+| README đủ các mục ở 5.2 của đặc tả, gồm giả định và rủi ro còn hiệu lực | `README.md` |
 | Kiểm tra tái lập từ môi trường sạch **bởi người không viết phần đó** | Biên bản kiểm tra |
 | Rà secret trong toàn bộ lịch sử commit | gitleaks hoặc `git log -p` rà thủ công: 0 phát hiện |
 | Đối chiếu ma trận 13.2: mọi FR/NFR/BR có kiểm thử hoặc lý do rõ ràng | Không ô trống |
@@ -130,7 +130,7 @@ Mốc nặng nhất và rủi ro nhất.
 
 ## 8. Bám sát rủi ro
 
-Rà lại bảng 15.3 của đặc tả ở cuối mỗi mốc. Mỗi rủi ro được đánh dấu **đã đóng**, **còn mở** hoặc **đã xảy ra**; rủi ro đã xảy ra phải ghi lại việc thực tế đã làm gì.
+Rà lại bảng 5.5 của đặc tả ở cuối mỗi mốc. Mỗi rủi ro được đánh dấu **đã đóng**, **còn mở** hoặc **đã xảy ra**; rủi ro đã xảy ra phải ghi lại việc thực tế đã làm gì.
 
 | Mốc | Rủi ro phải được trả lời |
 |---|---|

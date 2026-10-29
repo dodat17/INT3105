@@ -1,6 +1,6 @@
 # Kế hoạch kiểm thử
 
-Triển khai `T-01` … `T-30` của mục 9.1 [requirements.md](./requirements.md) thành ca kiểm thử cụ thể. Mọi bài kiểm thử bắt buộc phải tồn tại trong CI trước khi Pha 1 được nghiệm thu.
+Triển khai `T-01` … `T-30` của mục 6.1 [requirements.md](./requirements.md) thành ca kiểm thử cụ thể. Mọi bài kiểm thử bắt buộc phải tồn tại trong CI trước khi Pha 1 được nghiệm thu.
 
 ## 1. Tầng kiểm thử
 
@@ -12,7 +12,7 @@ Triển khai `T-01` … `T-30` của mục 9.1 [requirements.md](./requirements.
 | Architecture | `uv run lint-imports` và `uv run pytest -m architecture` | Ranh giới tầng và chiều phụ thuộc | import-linter |
 | Smoke | `scripts/smoke.sh` | Luồng đầu-cuối trên môi trường đã chạy | Docker Compose |
 
-Ba nguyên tắc lấy từ mục 9.1 của đặc tả:
+Ba nguyên tắc lấy từ mục 6.1 của đặc tả:
 
 1. **Mock repository không chứng minh được chống double booking.** Mọi bài kiểm thử tranh chấp phải chạy trên PostgreSQL thật, cùng phiên bản với môi trường chạy.
 2. **Sau kiểm thử tranh chấp phải kiểm tra dữ liệu trong DB**, không chỉ đếm HTTP status. Mỗi bài kiểm thử đồng thời kết thúc bằng `assertInvariants()` chạy I1–I7 của [data-model.md](data-model.md).
@@ -96,7 +96,7 @@ assert_invariants()  # I1–I7 phải trả 0 dòng
 
 ## 5. Smoke test
 
-`scripts/smoke.sh` chạy trên môi trường đã khởi động, dùng trong `docker compose`, trong CI và như bước kiểm tra trước mỗi lần đo tải (mục 10.5 bước 2):
+`scripts/smoke.sh` chạy trên môi trường đã khởi động, dùng trong `docker compose`, trong CI và như bước kiểm tra trước mỗi lần đo tải (mục 6.2.4 bước 2 của đặc tả):
 
 1. `GET /health/ready` → `200`.
 2. Đăng nhập tài khoản demo → lấy token.

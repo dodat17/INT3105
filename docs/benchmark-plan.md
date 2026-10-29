@@ -1,6 +1,6 @@
 # Kế hoạch đo tải trên Kaggle CPU
 
-Triển khai mục 10 của [requirements.md](./requirements.md) thành quy trình thực hiện được. Mục tiêu là **baseline trung thực**, không phải con số đẹp.
+Triển khai mục 6.2 của [requirements.md](./requirements.md) thành quy trình thực hiện được. Mục tiêu là **baseline trung thực**, không phải con số đẹp.
 
 ## 1. Ràng buộc định hình kế hoạch này
 
@@ -13,7 +13,7 @@ Triển khai mục 10 của [requirements.md](./requirements.md) thành quy trì
 
 ## 2. Ngân sách thời gian: vì sao phải rút gọn
 
-Ma trận đầy đủ theo mục 10.5:
+Ma trận đầy đủ theo mục 6.2.4:
 
 ```
 6 kịch bản × 5 mức đồng thời × 3 lần lặp × 2 phiên bản = 180 lần chạy
@@ -23,7 +23,7 @@ Ma trận đầy đủ theo mục 10.5:
                                                          ≈ 11–12 giờ
 ```
 
-Con số này chạm trần của một phiên notebook Kaggle CPU, không còn biên an toàn nào. Vì vậy **bước 1 của mục 10.5 là pilot**, và ma trận chính thức chỉ được chốt sau khi có số đo thật.
+Con số này chạm trần của một phiên notebook Kaggle CPU, không còn biên an toàn nào. Vì vậy **bước 1 của mục 6.2.4 là pilot**, và ma trận chính thức chỉ được chốt sau khi có số đo thật.
 
 ### Quy tắc rút gọn
 
@@ -57,7 +57,7 @@ Lưu thành `docs/benchmark-results/<run-id>/environment.json`:
 
 ### 3.2. Biến kiểm soát
 
-Bốn giá trị sau **phải giữ nguyên** giữa baseline và bản cải tiến (mục 10.2): `webWorkers`, `anyioThreadTokens`, `dbPoolMaxSize` và timeout của k6. Nếu chính một giá trị là nội dung cải tiến được đo, phải khai báo rõ và đo riêng tác động, không đổi cùng lúc với thay đổi kiến trúc.
+Bốn giá trị sau **phải giữ nguyên** giữa baseline và bản cải tiến (mục 6.2.1): `webWorkers`, `anyioThreadTokens`, `dbPoolMaxSize` và timeout của k6. Nếu chính một giá trị là nội dung cải tiến được đo, phải khai báo rõ và đo riêng tác động, không đổi cùng lúc với thay đổi kiến trúc.
 
 ### 3.3. Tải đăng nhập phải đo tách riêng
 
@@ -141,7 +141,7 @@ Không đánh đồng HTTP throughput với lượng vé đặt thành công. �
 
 ## 6. Báo cáo kết quả
 
-Bảng chi tiết theo mục 10.7, mỗi dòng là **một lần chạy**:
+Bảng chi tiết theo mục 6.2.6, mỗi dòng là **một lần chạy**:
 
 | Phiên bản/commit | Kịch bản | Profile | Đồng thời | Lần chạy | p50 | p95 | p99 | HTTP req/s | Hold/s | Xác nhận/s | 409 (%) | 5xx+timeout (%) | CPU | RAM | Vi phạm bất biến |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|

@@ -1,281 +1,181 @@
-# Kiến trúc Pha 1
+# Kiến trúc
 
-Tài liệu mô tả cấu trúc mã nguồn, chiều phụ thuộc, port của tầng nghiệp vụ và luồng xử lý các use case ghi dữ liệu. Đối chiếu mục 8.1 của [requirements.md](./requirements.md).
+Mô tả kiến trúc của hệ thống đặt vé xem phim
 
-## 1. Kiến trúc
+## 1. Sơ đồ tổng thể
 
-```mermaid
-flowchart TD
-    C[Client / k6] --> SEC[FastAPI ASGI<br/>JwtAuthMiddleware]
-    SEC --> CTL[APIRouter + Pydantic DTO<br/>Exception handlers]
-    CTL --> SVC[Domain services]
-    SVC --> PORT[Domain ports]
-    INFRA[SQLAlchemy, DB clock,<br/>PyJWT, bcrypt, Unit of Work] -. implements .-> PORT
-    INFRA --> DB[(PostgreSQL 16)]
-```
-
-## 2. Cấu trúc package
-
-```text
-app/
-├── api/
-│   ├── auth/          router.py, schemas.py
-│   ├── catalog/       movies.py, showtimes.py, seats.py
-│   ├── booking/       bookings.py, me_bookings.py, schemas.py
-│   ├── common/        pagination.py, errors.py, request_id.py
-│   ├── middleware/    jwt_auth.py
-│   └── dependencies.py
-├── domain/
-│   ├── model/         booking.py, money.py, seat.py, showtime.py
-│   ├── service/       login.py, create_booking.py, confirm_booking.py,
-│   │                  cancel_booking.py, view_booking.py, catalog.py
-│   ├── port/          repositories.py, unit_of_work.py, clock.py,
-│   │                  token_issuer.py, password_hasher.py
-│   └── error/         errors.py
-├── infrastructure/
-│   ├── persistence/   models/, repositories/, mappers/, session.py
-│   ├── time/          postgres_clock.py
-│   ├── security/      jwt_token_issuer.py, bcrypt_password_hasher.py
-│   └── uow.py
-├── bootstrap/
-│   ├── settings.py
-│   ├── container.py
-│   └── lifespan.py
-└── main.py
-alembic/
-└── versions/
-```
-
-## 3. Domain service là Python thuần
-
-Domain không dùng decorator hoặc kiểu của FastAPI, Pydantic hay SQLAlchemy. Service nhận port qua constructor và mở transaction qua Unit of Work.
-
-```python
-from collections.abc import Callable
-from typing import Protocol
-
-class UnitOfWork(Protocol):
-    bookings: BookingRepository
-    inventory: SeatInventoryRepository
-    showtimes: ShowtimeRepository
-    clock: Clock
-
-    def __enter__(self) -> "UnitOfWork": ...
-    def __exit__(self, exc_type, exc, traceback) -> None: ...
-    def commit(self) -> None: ...
-
-UnitOfWorkFactory = Callable[[], UnitOfWork]
-
-class CreateBookingService:
-    def __init__(self, uow_factory: UnitOfWorkFactory, hold_policy: HoldPolicy):
-        self._uow_factory = uow_factory
-        self._hold_policy = hold_policy
-
-    def execute(self, user_id: UserId, showtime_id: ShowtimeId, seat_ids: list[SeatId]):
-        with self._uow_factory() as uow:
-            booking = self._create(uow, user_id, showtime_id, seat_ids)
-            uow.commit()
-            return booking
-```
-
-`SqlAlchemyUnitOfWork` tạo một `Session`, chia sẻ session đó cho mọi repository và `PostgresClock`, commit tường minh và rollback khi thoát mà chưa commit hoặc có exception.
-
-Composition root ở `app.bootstrap.container` lắp ráp implementation.
-
-## 4. Trách nhiệm từng tầng
-
-| Tầng | Làm | Không được làm |
-|---|---|---|
-| `api` | Routing; Pydantic validation; lấy `user_id` từ request state; gọi service; ánh xạ domain exception thành HTTP JSON | Gọi SQLAlchemy/session trực tiếp; chứa business rule; tự xác minh JWT trong từng router |
-| `domain` | Model, rule giữ ghế, vòng đời booking, quyền sở hữu, giới hạn hold; khai báo Protocol | Import FastAPI, Starlette, Pydantic, SQLAlchemy, psycopg, API hoặc infrastructure |
-| `infrastructure` | Cài port bằng SQLAlchemy, SQL Core, DB clock, PyJWT, bcrypt và Unit of Work | Chứa business rule hoặc trả HTTP response |
-| `bootstrap` | Đọc cấu hình, tạo engine/session factory, lắp service, đăng ký middleware/router/handler | Chứa business rule |
-
-## 5. Ánh xạ danh tính
-
-`JwtAuthMiddleware` là pure ASGI middleware. Nó kiểm tra route công khai, đọc Bearer token, xác minh token và đặt `user_id` vào request state.
-
-```python
-def current_user_id(request: Request) -> UserId:
-    value = getattr(request.state, "user_id", None)
-    if value is None:
-        raise UnauthorizedError()
-    return UserId(value)
-
-@router.post("/bookings", status_code=201)
-def create_booking(
-    payload: CreateBookingRequest,
-    user_id: Annotated[UserId, Depends(current_user_id)],
-    service: Annotated[CreateBookingService, Depends(get_create_booking_service)],
-) -> BookingResponse:
-    return BookingResponse.from_domain(
-        service.execute(user_id, payload.showtime_id, payload.seat_ids)
-    )
-```
-
-Service nhận `user_id` như đối số và không biết request, header hoặc middleware tồn tại.
-
-## 6. Các port chính
-
-```python
-class SeatInventoryRepository(Protocol):
-    def lock_for_update(
-        self, showtime_id: ShowtimeId, sorted_seat_ids: list[SeatId]
-    ) -> list[SeatInventoryRow]: ...
-
-    def acquire_holds(
-        self,
-        showtime_id: ShowtimeId,
-        seat_ids: list[SeatId],
-        booking_id: BookingId,
-        expires_at: datetime,
-        decision_instant: datetime,
-    ) -> int: ...
-
-    def mark_booked(self, booking_id: BookingId, decision_instant: datetime) -> int: ...
-    def release_holds(self, booking_id: BookingId) -> int: ...
-
-class Clock(Protocol):
-    def now(self) -> datetime:
-        """Đọc SELECT clock_timestamp() bằng cùng Session của Unit of Work."""
-```
-
-## 7. Luồng use case
-
-### 7.1. Tạo booking và giữ ghế
+### 1.1. C4 mức 1 — Ngữ cảnh hệ thống
 
 ```mermaid
-sequenceDiagram
-    participant C as Client
-    participant A as FastAPI Router
-    participant S as CreateBookingService
-    participant U as SqlAlchemyUnitOfWork
-    participant I as SeatInventoryRepository
-    participant D as PostgreSQL
+flowchart TB
+    guest["👤 Khách<br/><i>chưa đăng nhập</i><br/>Xem phim, lịch chiếu, sơ đồ ghế; đăng ký"]
+    customer["👤 Khách hàng<br/><i>CUSTOMER</i><br/>Giữ ghế, xác nhận, hủy, xem vé"]
+    admin["👤 Quản trị viên<br/><i>ADMIN</i><br/>Quản lý phim, phòng, suất chiếu, người dùng"]
+    system["<b>Hệ thống đặt vé xem phim</b><br/>Ứng dụng web cho một rạp nhiều phòng:<br/>lịch chiếu, giữ ghế, xác nhận vé mô phỏng"]
+    guest -- " HTTPS, trình duyệt " --> system
+    customer -- " HTTPS, trình duyệt " --> system
+    admin -- " HTTPS, trình duyệt " --> system
+    classDef person fill: #08427b, color: #fff, stroke: #052e56
+    classDef sys fill: #1168bd, color: #fff, stroke: #0b4884
+class guest, customer, admin, dev person
+class system sys
+```
 
-    C->>A: POST /bookings
-    A->>A: Pydantic validate 1..8 ghế, không trùng, extra=forbid
-    A->>S: execute(userId, showtimeId, seatIds)
-    S->>U: enter transaction
-    U->>D: BEGIN
-    S->>D: SELECT showtime và kiểm tra điều kiện
-    S->>D: đếm hold hiệu lực của user
-    S->>I: lock_for_update(seatIds đã sort)
-    I->>D: SELECT ... FOR UPDATE ORDER BY seat_id
-    S->>D: decisionInstant = clock_timestamp()
-    S->>D: INSERT booking + booking_item
-    S->>I: acquire_holds(...)
-    I->>D: UPDATE ... WHERE state hợp lệ
-    alt rowcount == số ghế
-        S->>U: commit
-        A-->>C: 201 + Location + booking
-    else
-        U->>D: ROLLBACK
-        A-->>C: 409 SEAT_UNAVAILABLE
+Hệ thống **không** tích hợp hệ thống ngoài nào: không có cổng thanh toán, email/SMS hay hệ thống soát vé (requirements
+mục 1.3). Xác nhận đặt vé là mô phỏng thanh toán. TLS do reverse proxy phía trước đảm nhiệm (`AS-05`).
+
+### 1.2. C4 mức 2 — Container
+
+```mermaid
+flowchart TB
+    user["👤 Khách / Khách hàng / Quản trị viên"]
+    k6["k6<br/><i>load generator, Kaggle CPU</i>"]
+
+    subgraph system["Hệ thống đặt vé xem phim"]
+        spa["<b>Web SPA</b><br/><i>React 19, TypeScript, Vite</i><br/>Giao diện khách và trang quản trị;<br/>chạy trong trình duyệt"]
+        api["<b>API application</b><br/><i>Python 3.12, FastAPI, Uvicorn</i><br/>REST JSON /api/v1, xác thực JWT,<br/>nghiệp vụ; phục vụ luôn file tĩnh của SPA"]
+        db[("<b>Database</b><br/><i>PostgreSQL 16</i><br/>Người dùng, danh mục,<br/>booking, inventory ghế")]
+        migrate["<b>Migrate job</b><br/><i>Alembic</i><br/>Đưa schema lên head<br/>trước khi API chạy"]
+        seed["<b>Seed job</b><br/><i>Python script</i><br/>ADMIN, phim, phòng,<br/>suất chiếu mẫu"]
     end
+
+    user -- " HTTPS " --> spa
+    user -- " tải SPA: GET / " --> api
+    spa -- " JSON/HTTP, Bearer JWT<br/>/api/v1/* " --> api
+    k6 -- " JSON/HTTP<br/>/api/v1/* " --> api
+    api -- " SQL, psycopg 3<br/>pool kết nối " --> db
+    migrate -- " DDL " --> db
+    seed -- " SQL qua repository " --> db
+    classDef container fill: #438dd5, color: #fff, stroke: #2e6295
+    classDef job fill: #85bbf0, color: #000, stroke: #5d82a8
+    classDef ext fill: #999, color: #fff, stroke: #6b6b6b
+class spa, api, db container
+class migrate,seed job
+class user,k6 ext
 ```
 
-`seatIds` phải sort tăng dần trước khi khóa. Booking được insert trước inventory update vì `showtime_seat.booking_id` tham chiếu booking.
+| Container       | Công nghệ                                    | Trách nhiệm                                                                                                     | Triển khai                                                                                                                                                                        |
+|-----------------|----------------------------------------------|-----------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Web SPA         | React 19, TypeScript, React Router 7, Vite 8 | Hiển thị phim, lịch chiếu, sơ đồ ghế, vé; trang quản trị; giữ token trong `localStorage` và gửi kèm mọi request | Build thành file tĩnh trong `frontend/dist`, được API phục vụ cùng cổng 8080 (cùng origin, không cần CORS). Khi phát triển, Vite chạy ở 5173 và proxy `/api`, `/health` sang 8080 |
+| API application | FastAPI trên Uvicorn                         | Toàn bộ nghiệp vụ, xác thực, phân quyền, hợp đồng REST, Swagger `/docs`, health check                           | Service `app` trong Docker Compose; số worker qua `WEB_WORKERS`                                                                                                                   |
+| Database        | PostgreSQL 16                                | Nguồn dữ liệu duy nhất và nguồn quyết định cấp ghế (`CON-07`); đồng hồ quyết định (`CON-06`)                    | Service `db`, volume `postgres-data`                                                                                                                                              |
+| Migrate job     | Alembic                                      | Chạy `alembic upgrade head`                                                                                     | Service `migrate`, chạy một lần; `app` chỉ khởi động khi job này thành công                                                                                                       |
+| Seed job        | `scripts/seed.py`                            | Tạo dữ liệu mẫu, chạy lại không tạo trùng                                                                       | Service `seed` (profile `tools`), chạy tay                                                                                                                                        |
 
-### 7.2. Xác nhận
+Trên Kaggle không có Docker daemon (`CON-09`), nên API, PostgreSQL và k6 chạy trực tiếp trong notebook với cùng phiên
+bản phần mềm và cấu hình. Chi tiết ở [benchmark-plan.md](./benchmark-plan.md).
 
-```text
-BEGIN
-  SELECT booking WHERE id=:id FOR UPDATE
-  decisionInstant := SELECT clock_timestamp()
-  kiểm tra quyền sở hữu và trạng thái
-  CONFIRMED → trả booking cũ, không ghi thêm
-  hết hạn → 409 BOOKING_EXPIRED
-  UPDATE showtime_seat ... WHERE booking_id=:id AND state='HELD'
-    AND hold_expires_at > :decisionInstant
-  rowcount sai → rollback, 409
-  UPDATE booking SET status='CONFIRMED', confirmed_at=..., booking_code=...
-COMMIT
+---
+
+## 2. Các thành phần chính
+
+### 2.1. Phân tầng trong API
+
+API là **modular monolith**: mỗi module nghiệp vụ đi qua đủ các tầng, và mọi phụ thuộc hướng vào tầng domain.
+
+```mermaid
+flowchart LR
+    subgraph api["app/api — tầng giao tiếp"]
+        mw["Middleware<br/>RequestId → SecurityHeaders →<br/>RequestBody → Auth"]
+        routers["Router + Pydantic DTO<br/>theo module"]
+        errors["Exception handler<br/>DomainError → HTTP"]
+    end
+    subgraph domain["app/domain — nghiệp vụ, Python thuần"]
+        services["Service theo module"]
+        models["Model dataclass bất biến"]
+        ports["Port (Protocol):<br/>repository, UnitOfWork,<br/>Clock, TokenService, PasswordHasher"]
+    end
+    subgraph infra["app/infrastructure — adapter"]
+        repos["Repository SQLAlchemy"]
+        uow["SqlAlchemyUnitOfWork"]
+        clock["DatabaseClock"]
+        sec["JwtTokenService<br/>BcryptPasswordHasher"]
+    end
+    boot["app/bootstrap<br/>Settings, create_app:<br/>lắp ráp mọi thành phần"]
+    mw --> routers --> services
+    services --> models
+    services --> ports
+    repos -. " hiện thực " .-> ports
+    uow -. " hiện thực " .-> ports
+    clock -. " hiện thực " .-> ports
+    sec -. " hiện thực " .-> ports
+    boot --> api
+    boot --> infra
+    boot --> domain
 ```
 
-### 7.3. Hủy
+| Tầng                 | Trách nhiệm                                                                                                                                                                | Không được làm                                                                                               |
+|----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| `app/api`            | Routing; kiểm tra DTO bằng Pydantic (từ chối trường lạ); lấy danh tính người gọi từ middleware; gọi service; đổi kết quả và lỗi thành JSON theo hợp đồng lỗi               | Truy cập DB hay persistence; chứa quy tắc nghiệp vụ; tự xác minh token trong router                          |
+| `app/domain`         | Model, quy tắc nghiệp vụ `BR-01` … `BR-30`, kiểm tra vai trò và quyền sở hữu; khai báo port mà mình cần                                                                    | Import FastAPI, Starlette, Pydantic, SQLAlchemy, psycopg, PyJWT, bcrypt, hoặc `app.api`/`app.infrastructure` |
+| `app/infrastructure` | Hiện thực port: repository bằng SQLAlchemy (ORM cho dữ liệu thường, Core cho câu lệnh khóa và cập nhật có điều kiện trên inventory), Unit of Work, đồng hồ DB, JWT, bcrypt | Chứa quy tắc nghiệp vụ; trả HTTP response                                                                    |
+| `app/bootstrap`      | Đọc cấu hình từ biến môi trường; tạo engine và session factory; khởi tạo service; đăng ký middleware, router, exception handler; mount SPA                                 | Chứa quy tắc nghiệp vụ                                                                                       |
 
-```text
-BEGIN
-  SELECT booking WHERE id=:id FOR UPDATE
-  decisionInstant := SELECT clock_timestamp()
-  kiểm tra quyền sở hữu
-  CONFIRMED → 409
-  CANCELLED hoặc HELD đã hết hạn → 204 idempotent
-  UPDATE showtime_seat SET AVAILABLE ... WHERE booking_id=:id AND state='HELD'
-  UPDATE booking SET status='CANCELLED', cancelled_at=:decisionInstant
-COMMIT
-```
+**Middleware** chạy theo thứ tự cố định, nên cả lỗi xác thực cũng có `requestId` và header bảo mật:
 
-### 7.4. Đường đọc
+| Thứ tự | Middleware                  | Việc                                                                                                                            |
+|--------|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| 1      | `RequestIdMiddleware`       | Sinh `requestId`, trả header `X-Request-Id`, ghi một dòng log cho mỗi request (`NFR-06`)                                        |
+| 2      | `SecurityHeadersMiddleware` | Thêm CSP, `nosniff`, `X-Frame-Options`, `Referrer-Policy` (`NFR-08`)                                                            |
+| 3      | `RequestBodyMiddleware`     | Chặn body > 64 KB (`413`) và Content-Type khác JSON (`415`) (`NFR-05`)                                                          |
+| 4      | `AuthMiddleware`            | Nơi **duy nhất** xác minh Bearer JWT. Mọi route dưới `/api/` cần token, trừ danh sách công khai; route mới mặc định được bảo vệ |
 
-Đường đọc không thu hồi hold. Trạng thái hiệu lực được suy ra trong SQL bằng `clock_timestamp()`. Bộ lọc booking dùng điều kiện trên cột thật để pagination và `totalItems` nhất quán.
+### 2.2. Module nghiệp vụ
 
-## 8. Xử lý lỗi
+| Module       | Sở hữu                                            | Endpoint                                                                | Use case             |
+|--------------|---------------------------------------------------|-------------------------------------------------------------------------|----------------------|
+| `auth`       | `users`                                           | `/auth/*`, `/admin/users`                                               | UC-01, UC-02, UC-13  |
+| `catalog`    | `movies`                                          | `/movies`, `/admin/movies`                                              | UC-03, UC-10         |
+| `cinema`     | `rooms`, `seats`                                  | `/admin/auditoriums`                                                    | UC-11                |
+| `scheduling` | `showtimes`; tính giá ghế (`BR-10`); mở/ngừng bán | `/showtimes`, `/admin/showtimes`                                        | UC-04, UC-12         |
+| `booking`    | `bookings`, `booking_items`, `showtime_seats`     | `/bookings`, `/me/bookings`, `/showtimes/{id}/seats`, `/admin/bookings` | UC-05 … UC-09, UC-14 |
 
-`@app.exception_handler(...)` là nơi duy nhất đổi domain exception thành HTTP response.
+### 2.3. Frontend
 
-| Domain exception | HTTP | `error.code` |
-|---|---|---|
-| `ResourceNotFoundError` | 404 | `RESOURCE_NOT_FOUND` |
-| `SeatUnavailableError` | 409 | `SEAT_UNAVAILABLE` |
-| `BookingExpiredError` | 409 | `BOOKING_EXPIRED` |
-| `InvalidBookingStateError` | 409 | `INVALID_BOOKING_STATE` |
-| `ShowtimeNotBookableError` | 409 | `SHOWTIME_NOT_BOOKABLE` |
-| `HoldLimitExceededError` | 409 | `HOLD_LIMIT_EXCEEDED` |
-| `DomainValidationError`, `RequestValidationError` | 400 | `VALIDATION_ERROR` |
+| Thành phần                       | Trách nhiệm                                                                                                                                                            |
+|----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `src/router.tsx`                 | Định tuyến: `/`, `/movies/:movieId`, `/login`, `/register`, `/tickets`, `/tickets/:bookingId`, `/admin`                                                                |
+| `src/app/AppShell.tsx`           | Khung trang; giữ phiên đăng nhập (token trong `localStorage`) và thông tin người dùng hiện tại                                                                         |
+| `src/components/RequireRole.tsx` | Chặn trang vé với người không phải `CUSTOMER` và trang quản trị với người không phải `ADMIN` (`AC-17.6`). Đây chỉ là trải nghiệm giao diện; quyền thật do API kiểm tra |
+| `src/pages/*`                    | Trang chủ, chi tiết phim kèm lịch chiếu và sơ đồ ghế, đăng nhập/đăng ký, danh sách và chi tiết vé, quản trị                                                            |
+| `src/components/*`               | Sơ đồ ghế, tóm tắt booking, quản trị phim/phòng/suất chiếu, trạng thái tải và lỗi                                                                                      |
+| `src/lib/apiClient.ts`           | Lớp gọi API duy nhất: thêm tiền tố `/api/v1`, header `Authorization`, đổi body lỗi thành `ApiError` có `status` và `code`                                              |
+| `src/lib/formatters.ts`          | Hiển thị tiền `117.000 đ` và giờ theo giờ Việt Nam                                                                                                                     |
 
-Infrastructure bắt `sqlalchemy.exc.IntegrityError` và các lỗi psycopg có SQLSTATE đã biết như deadlock/lock conflict, rollback session rồi đổi thành domain error trước khi thoát repository hoặc Unit of Work.
+Giao diện xử lý lỗi theo `error.code`, không theo câu chữ; ví dụ `SEAT_UNAVAILABLE` thì báo lỗi và tải lại sơ đồ ghế
+(`AC-17.4`).
 
-## 9. Kiểm chứng ranh giới kiến trúc
+---
 
-File `.importlinter` chứa ít nhất:
+## 3. Tech stack và lý do chọn
 
-```ini
-[importlinter]
-root_packages =
-    app
+### 3.1. Lựa chọn công nghệ
 
-[importlinter:contract:domain_is_independent]
-name = Domain must not depend on framework or outer layers
-type = forbidden
-source_modules =
-    app.domain
-forbidden_modules =
-    fastapi
-    starlette
-    pydantic
-    sqlalchemy
-    psycopg
-    app.api
-    app.infrastructure
+| Thành phần       | Lựa chọn                                         | Lý do                                                                                                                                                                                                | Phương án đã cân nhắc                                                                                                           |
+|------------------|--------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| Kiểu kiến trúc   | Modular monolith, clean architecture             | Giữ ghế, xác nhận, hủy phải nguyên tử trên nhiều bảng (`CON-04`): một tiến trình và một DB cho phép dùng một transaction. Ranh giới module và tầng vẫn tách được và kiểm tra tự động được (`CON-02`) | Microservices: cần giao dịch phân tán cho đặt vé, nằm ngoài phạm vi (mục 1.3)                                                   |
+| Ngôn ngữ backend | Python 3.12                                      | Kiểu tĩnh với mypy strict; `Protocol` cho phép khai báo port mà domain không phụ thuộc framework                                                                                                     | —                                                                                                                               |
+| Web framework    | FastAPI trên Uvicorn                             | DTO bằng Pydantic sinh luôn OpenAPI và Swagger UI (tiêu chí nghiệm thu Pha 1, requirements mục 6.4); middleware ASGI để xác thực tập trung; chạy nhiều worker                                        | Flask: thiếu kiểm tra DTO và OpenAPI sẵn có. Django: ORM và cấu trúc app khó tách khỏi tầng domain                              |
+| Truy cập dữ liệu | SQLAlchemy 2                                     | ORM làm data mapper cho dữ liệu thường (`CON-03`); Core cho câu `SELECT … FOR UPDATE` và `UPDATE` có điều kiện trả `rowcount`, đúng cơ chế chống bán trùng (`CON-05`)                                | Chỉ dùng ORM: khó kiểm soát câu SQL ở đường ghi nóng. SQL thuần: mất ánh xạ và kiểm tra `alembic check`                         |
+| Migration        | Alembic                                          | Đi cùng SQLAlchemy; `alembic check` trong CI phát hiện model và migration lệch nhau                                                                                                                  | —                                                                                                                               |
+| Database         | PostgreSQL 16                                    | Khóa dòng, transaction, `CHECK`, khóa ngoại để bảo vệ quy tắc ở DB; `clock_timestamp()` làm nguồn thời gian duy nhất (`CON-06`); có sẵn và cài được trên Kaggle                                      | SQLite: chỉ dùng cho kiểm thử nhanh, không chứng minh được hành vi khóa đồng thời. MySQL: không có lợi thế rõ ràng cho bài toán |
+| Driver DB        | psycopg 3                                        | Driver PostgreSQL chính thức cho SQLAlchemy 2                                                                                                                                                        | —                                                                                                                               |
+| Xác thực         | JWT HS256 (PyJWT)                                | Không cần session phía server, nên mở rộng ngang dễ (`NFR-09`); một khóa ký từ biến môi trường (`NFR-08`)                                                                                            | Session lưu trong DB: thêm truy vấn mỗi request và trạng thái chia sẻ giữa worker                                               |
+| Hash mật khẩu    | bcrypt, cost 12                                  | Thuật toán chậm có salt, chuẩn phổ biến (`NFR-08`)                                                                                                                                                   | Argon2: tốt hơn về lý thuyết nhưng không cần thiết ở phạm vi này                                                                |
+| Frontend         | React 19, TypeScript, React Router 7             | SPA nhiều trạng thái tương tác (sơ đồ ghế, đếm ngược giữ ghế); TypeScript bắt lỗi kiểu dữ liệu API khi build                                                                                         | Trang render phía server: khó làm sơ đồ ghế tương tác và phải trộn giao diện vào backend                                        |
+| Build frontend   | Vite 8                                           | Dev server nhanh, proxy sang API; build ra file tĩnh để backend phục vụ cùng origin                                                                                                                  | —                                                                                                                               |
+| Quản lý gói      | uv (`uv.lock`), npm (`package-lock.json`)        | Lockfile cố định phiên bản, cài lại giống hệt từ môi trường sạch (`NFR-07`)                                                                                                                          | pip + requirements.txt: không khóa phụ thuộc bắc cầu chặt bằng                                                                  |
+| Chất lượng mã    | pytest, ruff, mypy strict, import-linter, ESLint | Kiểm thử, định dạng, kiểu tĩnh và ranh giới kiến trúc đều chạy tự động trong CI (`NFR-10`)                                                                                                           | —                                                                                                                               |
+| Đóng gói         | Docker multi-stage, Docker Compose               | Một image chứa cả API và SPA đã build; Compose sắp thứ tự `db` → `migrate` → `app` (`CON-08`)                                                                                                        | Kubernetes: ngoài phạm vi                                                                                                       |
+| Đo tải           | k6                                               | Script JavaScript tái lập được, chạy được trên Kaggle không cần Docker (`DP-03`)                                                                                                                     | Locust: tốn CPU hơn trên máy dùng chung với backend (`RI-03`)                                                                   |
 
-[importlinter:contract:api_does_not_reach_persistence]
-name = API must not import persistence implementations
-type = forbidden
-source_modules =
-    app.api
-forbidden_modules =
-    app.infrastructure.persistence
-```
+### 4.2. Những gì cố tình chưa có
 
-CI chạy `uv run lint-imports`. Một vi phạm làm build fail.
-
-## 10. Migration và startup
-
-- Alembic revision nằm trong `alembic/versions/`.
-- Trước khi start app: `uv run alembic upgrade head`.
-- App không gọi `create_all`.
-- Lifespan chỉ khởi tạo dependency và đóng engine khi shutdown.
-- `/health/live` chỉ kiểm tra tiến trình.
-- `/health/ready` kiểm tra DB và so sánh `alembic_version` với script heads.
-
-## 11. Những gì cố tình chưa có ở Pha 1
-
-| Không có | Lý do |
-|---|---|
-| Tác vụ nền thu hồi hold | Tính đúng đắn không phụ thuộc tần suất job |
-| Cache | PostgreSQL là nguồn quyết định; cache là ứng viên Pha 2 |
-| Idempotency key cho `POST /bookings` | Client không được retry mù |
-| Refresh/revoke token | Ngoài phạm vi |
-| Rate limit login | Ngoài phạm vi Pha 1 |
+| Không có                             | Lý do                                                                                                                      |
+|--------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
+| Cache                                | PostgreSQL là nguồn quyết định cấp ghế (`CON-07`). Cache là ứng viên của Pha 2, chỉ thêm khi số liệu baseline cho thấy cần |
+| Tác vụ nền thu hồi hold              | Đường ghi tự cấp lại ghế hết hạn, nên tính đúng đắn không phụ thuộc tác vụ nền (`FR-08`)                                   |
+| Message queue, event bus             | Mọi luồng đều đồng bộ trong một transaction; không có hệ thống ngoài cần thông báo                                         |
+| Idempotency key cho `POST /bookings` | Client không tự gửi lại khi chưa biết kết quả mà xem lại danh sách vé (`FR-05`)                                            |
+| Refresh token, thu hồi token         | Ngoài phạm vi (`AS-04`)                                                                                                    |
+| Giới hạn tần suất                    | Ngoài phạm vi (`AS-07`, `RI-10`)                                                                                           |
