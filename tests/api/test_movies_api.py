@@ -91,21 +91,6 @@ def test_guest_cannot_call_admin_movie_api(client: TestClient) -> None:
     assert client.delete(f"/api/v1/admin/movies/{uuid4()}").status_code == 401
 
 
-def test_admin_lists_movies_in_admin_namespace(
-    client: TestClient, admin_token: str, customer_token: str
-) -> None:
-    movie = _create(client, admin_token).json()
-
-    listing = client.get("/api/v1/admin/movies", headers=auth_header(admin_token))
-
-    assert listing.status_code == 200
-    assert listing.json()["items"] == [movie]
-    assert (
-        client.get("/api/v1/admin/movies", headers=auth_header(customer_token)).status_code == 403
-    )
-    assert client.get("/api/v1/admin/movies").status_code == 401
-
-
 def test_admin_updates_movie(client: TestClient, admin_token: str, customer_token: str) -> None:
     movie = _create(client, admin_token).json()
     url = f"/api/v1/admin/movies/{movie['id']}"

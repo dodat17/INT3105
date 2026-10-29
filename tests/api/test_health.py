@@ -8,7 +8,7 @@ from app.bootstrap.settings import Settings
 
 def test_health_returns_ok_and_request_id() -> None:
     with TestClient(create_app()) as client:
-        response = client.get("/health")
+        response = client.get("/health/live")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
@@ -22,7 +22,7 @@ def test_health_returns_ok_and_request_id() -> None:
 def test_docs_csp_allows_swagger_assets_only_on_docs() -> None:
     with TestClient(create_app()) as client:
         docs_response = client.get("/docs")
-        health_response = client.get("/health")
+        health_response = client.get("/health/live")
 
     docs_csp = docs_response.headers["content-security-policy"]
     health_csp = health_response.headers["content-security-policy"]

@@ -1,0 +1,23 @@
+from collections.abc import Callable
+from typing import Protocol
+from uuid import UUID
+
+from app.domain.cinema.model import Room, Seat
+from app.domain.ports import UnitOfWork
+
+
+class RoomRepository(Protocol):
+    def get(self, room_id: UUID) -> Room | None: ...
+    def get_by_name(self, name: str) -> Room | None: ...
+    def list_all(self) -> list[Room]: ...
+    def lock(self, room_id: UUID) -> Room | None: ...
+    def add(self, room: Room, seats: list[Seat]) -> None: ...
+    def seats(self, room_id: UUID) -> list[Seat]: ...
+
+
+class CinemaUnitOfWork(UnitOfWork, Protocol):
+    @property
+    def rooms(self) -> RoomRepository: ...
+
+
+CinemaUnitOfWorkFactory = Callable[[], CinemaUnitOfWork]

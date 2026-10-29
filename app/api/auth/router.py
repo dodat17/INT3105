@@ -2,16 +2,15 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter
 from pydantic import StringConstraints
 
 from app.api.common.auth import ActorDep
-from app.api.common.schemas import CONFLICT, CamelModel, PageResponse, RequestModel
+from app.api.common.schemas import CONFLICT, CamelModel, RequestModel
 from app.api.dependencies import AuthServiceDep
 from app.domain.auth.model import Role, User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-admin_router = APIRouter(prefix="/admin/users", tags=["admin"])
 
 Email = Annotated[
     str,
@@ -27,15 +26,6 @@ class RegisterRequest(RequestModel):
     full_name: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)
     ]
-
-
-class UserUpdateRequest(RequestModel):
-    """Email and password stay with the account owner; admins change only these."""
-
-    full_name: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)
-    ]
-    role: Role
 
 
 class LoginRequest(RequestModel):
@@ -82,42 +72,3 @@ def login(payload: LoginRequest, service: AuthServiceDep) -> TokenResponse:
 @router.get("/me", summary="Thông tin người dùng hiện tại")
 def me(actor: ActorDep, service: AuthServiceDep) -> UserResponse:
     return UserResponse.from_domain(service.current_user(actor))
-
-
-@admin_router.get("", summary="Danh sách người dùng (ADMIN)")
-def list_users(
-    actor: ActorDep,
-    service: AuthServiceDep,
-    q: Annotated[str | None, Query(max_length=100, description="Tìm theo email, họ tên")] = None,
-    role: Annotated[Role | None, Query()] = None,
-    page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
-) -> PageResponse[UserResponse]:
-    result = service.list_users(actor, q, role, page, page_size)
-    return PageResponse[UserResponse](
-        items=[UserResponse.from_domain(user) for user in result.items],
-        page=result.page,
-        page_size=result.page_size,
-        total_items=result.total_items,
-    )
-
-
-@admin_router.get("/{user_id}", summary="Chi tiết người dùng (ADMIN)")
-def get_user(user_id: UUID, actor: ActorDep, service: AuthServiceDep) -> UserResponse:
-    return UserResponse.from_domain(service.get_user(actor, user_id))
-
-
-@admin_router.put("/{user_id}", summary="Đổi họ tên, vai trò người dùng (ADMIN)")
-def update_user(
-    user_id: UUID, payload: UserUpdateRequest, actor: ActorDep, service: AuthServiceDep
-) -> UserResponse:
-    user = service.update_user(actor, user_id, full_name=payload.full_name, role=payload.role)
-    return UserResponse.from_domain(user)
-
-
-@admin_router.delete(
-    "/{user_id}", status_code=204, summary="Xóa người dùng chưa có booking (ADMIN)"
-)
-def delete_user(user_id: UUID, actor: ActorDep, service: AuthServiceDep) -> Response:
-    service.delete_user(actor, user_id)
-    return Response(status_code=204)

@@ -1,7 +1,6 @@
 import logging
 from functools import partial
 from pathlib import Path
-from typing import cast
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
@@ -23,7 +22,6 @@ from app.domain.auth.service import AuthService
 from app.domain.booking.service import BookingService
 from app.domain.catalog.service import MovieService
 from app.domain.cinema.service import RoomService
-from app.domain.ports import UnitOfWorkFactory
 from app.domain.scheduling.service import ShowtimeService
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.persistence.readiness import DatabaseReadiness
@@ -63,7 +61,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     session_factory = create_session_factory(settings.database_url, settings.db_pool_size)
-    uow_factory = cast(UnitOfWorkFactory, partial(SqlAlchemyUnitOfWork, session_factory))
+    # One adapter serves every module; each service sees it only through its own module port.
+    uow_factory = partial(SqlAlchemyUnitOfWork, session_factory)
     tokens = JwtTokenService(settings.jwt_secret, settings.jwt_algorithm, settings.jwt_ttl_seconds)
 
     app = FastAPI(title=settings.app_name, version="0.1.0", description=API_DESCRIPTION)

@@ -3,21 +3,14 @@ from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
 from app.domain.auth.model import Actor, require_admin
-from app.domain.catalog.model import Movie
-from app.domain.cinema.model import Room
 from app.domain.errors import BusinessRuleViolation, NotFoundError, ShowtimeOverlapError
-from app.domain.ports import Page, UnitOfWorkFactory
-from app.domain.scheduling.model import (
-    SeatMapEntry,
-    SeatStatus,
-    Showtime,
-    local_day_bounds,
-    seat_price,
-)
+from app.domain.ports import Page
+from app.domain.scheduling.model import Showtime, local_day_bounds
+from app.domain.scheduling.ports import SchedulingUnitOfWorkFactory
 
 
 class ShowtimeService:
-    def __init__(self, uow_factory: UnitOfWorkFactory, timezone: ZoneInfo) -> None:
+    def __init__(self, uow_factory: SchedulingUnitOfWorkFactory, timezone: ZoneInfo) -> None:
         self._uow_factory = uow_factory
         self._timezone = timezone
 
@@ -30,17 +23,6 @@ class ShowtimeService:
         )
         with self._uow_factory() as uow:
             return uow.showtimes.search(movie_id, starts_from, starts_before, page, page_size)
-
-    def get_showtime(self, showtime_id: UUID) -> tuple[Showtime, Movie, Room]:
-        with self._uow_factory() as uow:
-            showtime = uow.showtimes.get(showtime_id)
-            if showtime is None:
-                raise NotFoundError
-            movie = uow.movies.get(showtime.movie_id)
-            room = uow.rooms.get(showtime.room_id)
-        if movie is None or room is None:
-            raise NotFoundError
-        return showtime, movie, room
 
     def create_showtime(
         self,
@@ -139,27 +121,3 @@ class ShowtimeService:
         if base_price <= 0:
             raise BusinessRuleViolation("Giá vé phải lớn hơn 0.")
         return starts_at.astimezone(UTC)  # times are kept in UTC
-
-    def seat_map(self, showtime_id: UUID) -> tuple[Showtime, Room, list[SeatMapEntry]]:
-        with self._uow_factory() as uow:
-            showtime = uow.showtimes.get(showtime_id)
-            if showtime is None:
-                raise NotFoundError
-            room = uow.rooms.get(showtime.room_id)
-            if room is None:
-                raise NotFoundError
-            seats = uow.rooms.seats(room.id)
-            now = uow.clock.now()
-            statuses = uow.inventory.statuses(showtime.id, now)
-        return (
-            showtime,
-            room,
-            [
-                SeatMapEntry(
-                    seat,
-                    seat_price(showtime.base_price, seat.seat_type),
-                    SeatStatus(statuses.get(seat.id, "AVAILABLE")),
-                )
-                for seat in seats
-            ],
-        )

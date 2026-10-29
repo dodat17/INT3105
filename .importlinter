@@ -26,3 +26,34 @@ source_modules =
     app.api
 forbidden_modules =
     app.infrastructure.persistence
+
+[importlinter:contract:domain_modules_are_layered]
+name = Domain modules depend only downward (booking > scheduling > catalog | cinema > auth)
+type = layers
+layers =
+    app.domain.booking
+    app.domain.scheduling
+    app.domain.catalog | app.domain.cinema
+    app.domain.auth
+
+[importlinter:contract:api_modules_are_layered]
+name = API modules follow the same order as their domain modules
+type = layers
+layers =
+    app.api.booking
+    app.api.scheduling
+    app.api.catalog | app.api.cinema
+    app.api.auth
+
+[importlinter:contract:shared_kernel_is_independent]
+name = Shared kernel must not depend on any module
+type = forbidden
+source_modules =
+    app.domain.ports
+    app.domain.errors
+forbidden_modules =
+    app.domain.auth
+    app.domain.catalog
+    app.domain.cinema
+    app.domain.scheduling
+    app.domain.booking

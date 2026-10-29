@@ -81,7 +81,10 @@ def test_guest_sees_seat_map_with_vip_prices(
     assert response.status_code == 200
     body = response.json()
     assert body["showtimeId"] == showtime["id"]
-    assert body["auditorium"]["name"] == "Phòng 1"
+    assert body["movie"] == {"id": setup["movie"], "title": "Mai"}
+    assert body["auditorium"] == {"id": setup["room"], "name": "Phòng 1"}
+    assert body["startsAt"] == showtime["startsAt"]
+    assert (body["basePrice"], body["currency"], body["isOpenForBooking"]) == (90000, "VND", True)
     seats = body["seats"]
     assert len(seats) == 12
     assert [s["label"] for s in seats[:5]] == ["A1", "A2", "A3", "A4", "B1"]
@@ -120,22 +123,6 @@ def test_only_admin_creates_showtimes(
     assert as_customer.status_code == 403
     assert as_guest.status_code == 401
     assert client.get("/api/v1/showtimes").json()["totalItems"] == 0
-
-
-def test_guest_sees_showtime_detail(
-    client: TestClient, admin_token: str, setup: dict[str, str]
-) -> None:
-    showtime = create_showtime(client, admin_token, setup, "2026-10-20T19:00:00+07:00").json()
-
-    response = client.get(f"/api/v1/showtimes/{showtime['id']}")
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["movie"] == {"id": setup["movie"], "title": "Mai"}
-    assert body["auditorium"] == {"id": setup["room"], "name": "Phòng 1"}
-    assert body["currency"] == "VND"
-    assert body["basePrice"] == 90000
-    assert client.get(f"/api/v1/showtimes/{uuid4()}").status_code == 404
 
 
 def test_admin_updates_showtime(

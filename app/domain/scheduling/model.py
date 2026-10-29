@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
-from enum import StrEnum
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from app.domain.cinema.model import Seat, SeatType
+from app.domain.cinema.model import SeatType
 
 VIP_PRICE_PERCENT = 130  # BR-09: VIP = base x 1.3, kept in integer VND
 
@@ -18,19 +17,6 @@ class Showtime:
     ends_at: datetime
     base_price: int
     is_open_for_booking: bool = True
-
-
-class SeatStatus(StrEnum):
-    AVAILABLE = "AVAILABLE"
-    HELD = "HELD"
-    BOOKED = "BOOKED"
-
-
-@dataclass(frozen=True)
-class SeatMapEntry:
-    seat: Seat
-    price: int
-    status: SeatStatus
 
 
 def seat_price(base_price: int, seat_type: SeatType) -> int:
