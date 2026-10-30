@@ -485,34 +485,7 @@ Chi tiết ca kiểm thử: [test-plan.md](./test-plan.md).
 
 Quy trình thực hiện chi tiết: [benchmark-plan.md](./benchmark-plan.md).
 
-### 6.3. Pha 2 — cải tiến kiến trúc
-
-**Phương pháp**
-
-1. Phân tích baseline để xác định điểm nghẽn thực tế.
-2. Viết giả thuyết: thay đổi gì, tác động chỉ số nào, vì sao, đánh đổi gì.
-3. Chọn ít nhất một cải tiến kiến trúc có phạm vi rõ.
-4. Ghi ADR kèm sơ đồ trước/sau và cách giữ tính đúng đắn.
-5. Đo trên cùng kịch bản, dữ liệu và phần cứng; nếu kết hợp nhiều thay đổi thì đo từng thay đổi khi khả thi.
-
-**Hướng ứng viên**
-
-| Hướng                                       | Khi nào xem xét                                 | Đánh đổi                                                 |
-|---------------------------------------------|-------------------------------------------------|----------------------------------------------------------|
-| Cache-aside cho phim/suất chiếu             | Truy vấn đọc lặp lại chiếm tài nguyên đáng kể   | TTL, vô hiệu hóa, RAM, xử lý khi cache lỗi               |
-| Cache sơ đồ ghế, tách dữ liệu tĩnh/động     | L-02 là điểm nghẽn                              | Ghế hiển thị có thể cũ; ghi vẫn kiểm tra DB; fallback DB |
-| Điều chỉnh chiến lược đồng thời/transaction | Chờ khóa hoặc transaction dài hạn chế L-03/L-04 | Retry có giới hạn, deadlock, starvation                  |
-| Worker thu hồi hold hết hạn                 | Thu hồi trong request làm tăng độ trễ           | Thêm thành phần vận hành; job idempotent                 |
-| Tối ưu đường đọc và truy vấn                | N+1 hoặc query plan kém                         | Chi phí index/ghi; phân biệt với thay đổi kiến trúc      |
-
-- Phiên bản có cache phải chạy thêm T-29.
-- Không cố tình bỏ constraint hoặc viết baseline sai để tạo cải thiện. Chỉ thêm index có thể chưa đủ được coi là cải
-  tiến kiến trúc.
-- Theo dõi hồi quy ở các kịch bản khác; nếu không đạt mục tiêu thì báo cáo trung thực kết quả, nguyên nhân và giới hạn.
-
-### 6.4. Tiêu chí nghiệm thu
-
-**Pha 1**
+### 6.3. Tiêu chí nghiệm thu
 
 1. Mọi tiêu chí `AC-01.1` … `AC-17.6` ở mục 3 đạt; mọi quy tắc `BR-01` … `BR-30` được tuân thủ.
 2. Toàn bộ kiểm thử bắt buộc ở mục 6.1 đạt trong CI; NFR-01 ghi nhận 0 vi phạm.
@@ -522,17 +495,6 @@ Quy trình thực hiện chi tiết: [benchmark-plan.md](./benchmark-plan.md).
 5. Phân tầng đúng `CON-02`; T-27 chạy trong CI.
 6. Build và chạy được bằng Docker theo README trên môi trường sạch; đạt NFR-04.
 7. Có kết quả baseline thực sự chạy trên Kaggle CPU kèm dữ liệu thô và metadata môi trường; NFR-02 đạt.
-8. README đủ các mục ở 5.2; repository công khai; có commit ở các mốc M1–M4; không chứa secret.
-
-**Pha 2**
-
-1. Có vấn đề và số liệu baseline làm căn cứ; có ADR mô tả trước/sau, giả thuyết và đánh đổi.
-2. Có ít nhất một cải tiến được triển khai và kiểm thử; mọi tiêu chí Pha 1 vẫn đạt; NFR-01 = 0 vi phạm ở mọi mức tải đã
-   đo.
-3. So sánh trên cùng cấu hình Kaggle CPU, cùng tải, dữ liệu và ngân sách tài nguyên.
-4. Có kết quả thô, bảng/biểu đồ so sánh và hướng dẫn tái lập.
-5. Kết luận nêu rõ cải thiện, hồi quy hoặc không đạt, kèm cả số tuyệt đối lẫn phần trăm.
-
 ---
 
 ## 7. Phụ lục
