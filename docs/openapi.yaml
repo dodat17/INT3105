@@ -33,19 +33,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
-  /health:
-    get:
-      tags:
-      - ops
-      summary: Health
-      operationId: health_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
   /health/ready:
     get:
       tags:
@@ -324,47 +311,11 @@ paths:
           content:
             application/json:
               schema: *id001
-  /api/v1/showtimes/{showtime_id}:
-    get:
-      tags:
-      - scheduling
-      summary: Chi tiết suất chiếu
-      operationId: get_showtime_api_v1_showtimes__showtime_id__get
-      parameters:
-      - name: showtime_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Showtime Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ShowtimeDetailResponse'
-        '400':
-          description: 'VALIDATION_ERROR: dữ liệu không hợp lệ'
-          content:
-            application/json:
-              schema: *id001
-        '404':
-          description: RESOURCE_NOT_FOUND
-          content:
-            application/json:
-              schema: *id001
-        '500':
-          description: INTERNAL_ERROR
-          content:
-            application/json:
-              schema: *id001
   /api/v1/showtimes/{showtime_id}/seats:
     get:
       tags:
-      - scheduling
-      summary: Sơ đồ ghế của suất chiếu
+      - booking
+      summary: Thông tin suất chiếu và sơ đồ ghế
       operationId: seat_map_api_v1_showtimes__showtime_id__seats_get
       parameters:
       - name: showtime_id
@@ -655,82 +606,17 @@ paths:
             application/json:
               schema: *id001
   /api/v1/admin/movies:
-    get:
-      tags:
-      - admin
-      summary: Danh sách phim cho quản trị (ADMIN)
-      operationId: admin_list_movies_api_v1_admin_movies_get
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: q
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            maxLength: 100
-          - type: 'null'
-          description: Tìm theo tên phim
-          title: Q
-        description: Tìm theo tên phim
-      - name: page
-        in: query
-        required: false
-        schema:
-          type: integer
-          minimum: 1
-          default: 1
-          title: Page
-      - name: pageSize
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 100
-          minimum: 1
-          default: 20
-          title: Pagesize
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PageResponse_MovieResponse_'
-        '400':
-          description: 'VALIDATION_ERROR: dữ liệu không hợp lệ'
-          content:
-            application/json:
-              schema: *id001
-        '401':
-          description: 'UNAUTHENTICATED: thiếu hoặc sai token'
-          content:
-            application/json:
-              schema: *id001
-        '403':
-          description: 'FORBIDDEN: yêu cầu vai trò ADMIN'
-          content:
-            application/json:
-              schema: *id001
-        '500':
-          description: INTERNAL_ERROR
-          content:
-            application/json:
-              schema: *id001
     post:
       tags:
       - admin
       summary: Thêm phim (ADMIN)
       operationId: create_movie_api_v1_admin_movies_post
-      security:
-      - HTTPBearer: []
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/MovieCreateRequest'
+        required: true
       responses:
         '201':
           description: Successful Response
@@ -768,6 +654,8 @@ paths:
           content:
             application/json:
               schema: *id001
+      security:
+      - HTTPBearer: []
   /api/v1/admin/movies/{movie_id}:
     put:
       tags:
@@ -964,123 +852,6 @@ paths:
               schema: *id001
       security:
       - HTTPBearer: []
-  /api/v1/admin/auditoriums/{auditorium_id}:
-    get:
-      tags:
-      - admin
-      summary: Chi tiết phòng chiếu (ADMIN)
-      operationId: get_auditorium_api_v1_admin_auditoriums__auditorium_id__get
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: auditorium_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Auditorium Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuditoriumDetailResponse'
-        '400':
-          description: 'VALIDATION_ERROR: dữ liệu không hợp lệ'
-          content:
-            application/json:
-              schema: *id001
-        '401':
-          description: 'UNAUTHENTICATED: thiếu hoặc sai token'
-          content:
-            application/json:
-              schema: *id001
-        '403':
-          description: 'FORBIDDEN: yêu cầu vai trò ADMIN'
-          content:
-            application/json:
-              schema: *id001
-        '404':
-          description: RESOURCE_NOT_FOUND
-          content:
-            application/json:
-              schema: *id001
-        '500':
-          description: INTERNAL_ERROR
-          content:
-            application/json:
-              schema: *id001
-    put:
-      tags:
-      - admin
-      summary: Cập nhật phòng chiếu chưa có suất chiếu (ADMIN)
-      operationId: update_auditorium_api_v1_admin_auditoriums__auditorium_id__put
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: auditorium_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Auditorium Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AuditoriumUpdateRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuditoriumDetailResponse'
-        '409':
-          description: Xung đột nghiệp vụ, xem error.code
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '400':
-          description: 'VALIDATION_ERROR: dữ liệu không hợp lệ'
-          content:
-            application/json:
-              schema: *id001
-        '413':
-          description: 'PAYLOAD_TOO_LARGE: body vượt 64 KB'
-          content:
-            application/json:
-              schema: *id001
-        '415':
-          description: 'UNSUPPORTED_MEDIA_TYPE: body không phải JSON'
-          content:
-            application/json:
-              schema: *id001
-        '401':
-          description: 'UNAUTHENTICATED: thiếu hoặc sai token'
-          content:
-            application/json:
-              schema: *id001
-        '403':
-          description: 'FORBIDDEN: yêu cầu vai trò ADMIN'
-          content:
-            application/json:
-              schema: *id001
-        '404':
-          description: RESOURCE_NOT_FOUND
-          content:
-            application/json:
-              schema: *id001
-        '500':
-          description: INTERNAL_ERROR
-          content:
-            application/json:
-              schema: *id001
   /api/v1/admin/showtimes:
     post:
       tags:
@@ -1251,510 +1022,8 @@ paths:
           content:
             application/json:
               schema: *id001
-  /api/v1/admin/bookings:
-    get:
-      tags:
-      - admin
-      summary: Tra cứu booking (ADMIN)
-      operationId: admin_list_bookings_api_v1_admin_bookings_get
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: status
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - $ref: '#/components/schemas/BookingStatus'
-          - type: 'null'
-          title: Status
-      - name: userId
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Userid
-      - name: showtimeId
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Showtimeid
-      - name: page
-        in: query
-        required: false
-        schema:
-          type: integer
-          minimum: 1
-          default: 1
-          title: Page
-      - name: pageSize
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 100
-          minimum: 1
-          default: 20
-          title: Pagesize
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PageResponse_AdminBookingResponse_'
-        '400':
-          description: 'VALIDATION_ERROR: dữ liệu không hợp lệ'
-          content:
-            application/json:
-              schema: *id001
-        '401':
-          description: 'UNAUTHENTICATED: thiếu hoặc sai token'
-          content:
-            application/json:
-              schema: *id001
-        '403':
-          description: 'FORBIDDEN: yêu cầu vai trò ADMIN'
-          content:
-            application/json:
-              schema: *id001
-        '500':
-          description: INTERNAL_ERROR
-          content:
-            application/json:
-              schema: *id001
-  /api/v1/admin/bookings/{booking_id}:
-    get:
-      tags:
-      - admin
-      summary: Chi tiết booking bất kỳ (ADMIN)
-      operationId: admin_get_booking_api_v1_admin_bookings__booking_id__get
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: booking_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Booking Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminBookingDetailResponse'
-        '400':
-          description: 'VALIDATION_ERROR: dữ liệu không hợp lệ'
-          content:
-            application/json:
-              schema: *id001
-        '401':
-          description: 'UNAUTHENTICATED: thiếu hoặc sai token'
-          content:
-            application/json:
-              schema: *id001
-        '403':
-          description: 'FORBIDDEN: yêu cầu vai trò ADMIN'
-          content:
-            application/json:
-              schema: *id001
-        '404':
-          description: RESOURCE_NOT_FOUND
-          content:
-            application/json:
-              schema: *id001
-        '500':
-          description: INTERNAL_ERROR
-          content:
-            application/json:
-              schema: *id001
-  /api/v1/admin/users:
-    get:
-      tags:
-      - admin
-      summary: Danh sách người dùng (ADMIN)
-      operationId: list_users_api_v1_admin_users_get
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: q
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            maxLength: 100
-          - type: 'null'
-          description: Tìm theo email, họ tên
-          title: Q
-        description: Tìm theo email, họ tên
-      - name: role
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - $ref: '#/components/schemas/Role'
-          - type: 'null'
-          title: Role
-      - name: page
-        in: query
-        required: false
-        schema:
-          type: integer
-          minimum: 1
-          default: 1
-          title: Page
-      - name: pageSize
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 100
-          minimum: 1
-          default: 20
-          title: Pagesize
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PageResponse_UserResponse_'
-        '400':
-          description: 'VALIDATION_ERROR: dữ liệu không hợp lệ'
-          content:
-            application/json:
-              schema: *id001
-        '401':
-          description: 'UNAUTHENTICATED: thiếu hoặc sai token'
-          content:
-            application/json:
-              schema: *id001
-        '403':
-          description: 'FORBIDDEN: yêu cầu vai trò ADMIN'
-          content:
-            application/json:
-              schema: *id001
-        '500':
-          description: INTERNAL_ERROR
-          content:
-            application/json:
-              schema: *id001
-  /api/v1/admin/users/{user_id}:
-    get:
-      tags:
-      - admin
-      summary: Chi tiết người dùng (ADMIN)
-      operationId: get_user_api_v1_admin_users__user_id__get
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: User Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserResponse'
-        '400':
-          description: 'VALIDATION_ERROR: dữ liệu không hợp lệ'
-          content:
-            application/json:
-              schema: *id001
-        '401':
-          description: 'UNAUTHENTICATED: thiếu hoặc sai token'
-          content:
-            application/json:
-              schema: *id001
-        '403':
-          description: 'FORBIDDEN: yêu cầu vai trò ADMIN'
-          content:
-            application/json:
-              schema: *id001
-        '404':
-          description: RESOURCE_NOT_FOUND
-          content:
-            application/json:
-              schema: *id001
-        '500':
-          description: INTERNAL_ERROR
-          content:
-            application/json:
-              schema: *id001
-    put:
-      tags:
-      - admin
-      summary: Đổi họ tên, vai trò người dùng (ADMIN)
-      operationId: update_user_api_v1_admin_users__user_id__put
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: User Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserUpdateRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserResponse'
-        '400':
-          description: 'VALIDATION_ERROR: dữ liệu không hợp lệ'
-          content:
-            application/json:
-              schema: *id001
-        '413':
-          description: 'PAYLOAD_TOO_LARGE: body vượt 64 KB'
-          content:
-            application/json:
-              schema: *id001
-        '415':
-          description: 'UNSUPPORTED_MEDIA_TYPE: body không phải JSON'
-          content:
-            application/json:
-              schema: *id001
-        '401':
-          description: 'UNAUTHENTICATED: thiếu hoặc sai token'
-          content:
-            application/json:
-              schema: *id001
-        '403':
-          description: 'FORBIDDEN: yêu cầu vai trò ADMIN'
-          content:
-            application/json:
-              schema: *id001
-        '404':
-          description: RESOURCE_NOT_FOUND
-          content:
-            application/json:
-              schema: *id001
-        '500':
-          description: INTERNAL_ERROR
-          content:
-            application/json:
-              schema: *id001
-    delete:
-      tags:
-      - admin
-      summary: Xóa người dùng chưa có booking (ADMIN)
-      operationId: delete_user_api_v1_admin_users__user_id__delete
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: User Id
-      responses:
-        '204':
-          description: Successful Response
-        '400':
-          description: 'VALIDATION_ERROR: dữ liệu không hợp lệ'
-          content:
-            application/json:
-              schema: *id001
-        '401':
-          description: 'UNAUTHENTICATED: thiếu hoặc sai token'
-          content:
-            application/json:
-              schema: *id001
-        '403':
-          description: 'FORBIDDEN: yêu cầu vai trò ADMIN'
-          content:
-            application/json:
-              schema: *id001
-        '404':
-          description: RESOURCE_NOT_FOUND
-          content:
-            application/json:
-              schema: *id001
-        '500':
-          description: INTERNAL_ERROR
-          content:
-            application/json:
-              schema: *id001
 components:
   schemas:
-    AdminBookingDetailResponse:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        showtimeId:
-          type: string
-          format: uuid
-          title: Showtimeid
-        status:
-          $ref: '#/components/schemas/BookingStatus'
-        createdAt:
-          type: string
-          format: date-time
-          title: Createdat
-        expiresAt:
-          type: string
-          format: date-time
-          title: Expiresat
-        confirmedAt:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Confirmedat
-        cancelledAt:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Cancelledat
-        totalAmount:
-          type: integer
-          title: Totalamount
-        currency:
-          type: string
-          title: Currency
-          default: VND
-        bookingCode:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Bookingcode
-        items:
-          items:
-            $ref: '#/components/schemas/BookingItemResponse'
-          type: array
-          title: Items
-        movie:
-          $ref: '#/components/schemas/MovieRef'
-        showtime:
-          $ref: '#/components/schemas/ShowtimeRef'
-        auditorium:
-          $ref: '#/components/schemas/AuditoriumRef'
-        seats:
-          items:
-            $ref: '#/components/schemas/BookingSeatResponse'
-          type: array
-          title: Seats
-        userId:
-          type: string
-          format: uuid
-          title: Userid
-      type: object
-      required:
-      - id
-      - showtimeId
-      - status
-      - createdAt
-      - expiresAt
-      - confirmedAt
-      - cancelledAt
-      - totalAmount
-      - bookingCode
-      - items
-      - movie
-      - showtime
-      - auditorium
-      - seats
-      - userId
-      title: AdminBookingDetailResponse
-    AdminBookingResponse:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        showtimeId:
-          type: string
-          format: uuid
-          title: Showtimeid
-        status:
-          $ref: '#/components/schemas/BookingStatus'
-        createdAt:
-          type: string
-          format: date-time
-          title: Createdat
-        expiresAt:
-          type: string
-          format: date-time
-          title: Expiresat
-        confirmedAt:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Confirmedat
-        cancelledAt:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Cancelledat
-        totalAmount:
-          type: integer
-          title: Totalamount
-        currency:
-          type: string
-          title: Currency
-          default: VND
-        bookingCode:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Bookingcode
-        items:
-          items:
-            $ref: '#/components/schemas/BookingItemResponse'
-          type: array
-          title: Items
-        userId:
-          type: string
-          format: uuid
-          title: Userid
-      type: object
-      required:
-      - id
-      - showtimeId
-      - status
-      - createdAt
-      - expiresAt
-      - confirmedAt
-      - cancelledAt
-      - totalAmount
-      - bookingCode
-      - items
-      - userId
-      title: AdminBookingResponse
     AuditoriumCreateRequest:
       properties:
         name:
@@ -1787,38 +1056,6 @@ components:
       - rows
       - cols
       title: AuditoriumCreateRequest
-    AuditoriumDetailResponse:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        name:
-          type: string
-          title: Name
-        rows:
-          type: integer
-          title: Rows
-        cols:
-          type: integer
-          title: Cols
-        seatCount:
-          type: integer
-          title: Seatcount
-        vipRows:
-          items:
-            type: integer
-          type: array
-          title: Viprows
-      type: object
-      required:
-      - id
-      - name
-      - rows
-      - cols
-      - seatCount
-      - vipRows
-      title: AuditoriumDetailResponse
     AuditoriumRef:
       properties:
         id:
@@ -1859,39 +1096,6 @@ components:
       - cols
       - seatCount
       title: AuditoriumResponse
-    AuditoriumUpdateRequest:
-      properties:
-        name:
-          type: string
-          maxLength: 100
-          minLength: 1
-          title: Name
-        rows:
-          type: integer
-          maximum: 26.0
-          minimum: 1.0
-          title: Rows
-        cols:
-          type: integer
-          maximum: 30.0
-          minimum: 1.0
-          title: Cols
-        vipRows:
-          items:
-            type: integer
-          type: array
-          maxItems: 26
-          title: Viprows
-          description: Số thứ tự hàng VIP, 1 = hàng A
-          default: []
-      additionalProperties: false
-      type: object
-      required:
-      - name
-      - rows
-      - cols
-      title: AuditoriumUpdateRequest
-      description: PUT replaces the layout; seats are generated again.
     BookingDetailResponse:
       properties:
         id:
@@ -2275,29 +1479,6 @@ components:
       title: MovieUpdateRequest
       description: 'PUT replaces the whole movie: omitted optional fields are reset
         to their defaults.'
-    PageResponse_AdminBookingResponse_:
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/AdminBookingResponse'
-          type: array
-          title: Items
-        page:
-          type: integer
-          title: Page
-        pageSize:
-          type: integer
-          title: Pagesize
-        totalItems:
-          type: integer
-          title: Totalitems
-      type: object
-      required:
-      - items
-      - page
-      - pageSize
-      - totalItems
-      title: PageResponse[AdminBookingResponse]
     PageResponse_BookingResponse_:
       properties:
         items:
@@ -2367,29 +1548,6 @@ components:
       - pageSize
       - totalItems
       title: PageResponse[ShowtimeResponse]
-    PageResponse_UserResponse_:
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/UserResponse'
-          type: array
-          title: Items
-        page:
-          type: integer
-          title: Page
-        pageSize:
-          type: integer
-          title: Pagesize
-        totalItems:
-          type: integer
-          title: Totalitems
-      type: object
-      required:
-      - items
-      - page
-      - pageSize
-      - totalItems
-      title: PageResponse[UserResponse]
     ReadinessResponse:
       properties:
         status:
@@ -2445,8 +1603,28 @@ components:
           type: string
           format: uuid
           title: Showtimeid
+        movie:
+          $ref: '#/components/schemas/MovieRef'
         auditorium:
           $ref: '#/components/schemas/AuditoriumRef'
+        startsAt:
+          type: string
+          format: date-time
+          title: Startsat
+        endsAt:
+          type: string
+          format: date-time
+          title: Endsat
+        basePrice:
+          type: integer
+          title: Baseprice
+        currency:
+          type: string
+          title: Currency
+          default: VND
+        isOpenForBooking:
+          type: boolean
+          title: Isopenforbooking
         seats:
           items:
             $ref: '#/components/schemas/SeatResponse'
@@ -2455,9 +1633,16 @@ components:
       type: object
       required:
       - showtimeId
+      - movie
       - auditorium
+      - startsAt
+      - endsAt
+      - basePrice
+      - isOpenForBooking
       - seats
       title: SeatMapResponse
+      description: Also carries the showtime itself, so the seat page needs a single
+        request.
     SeatResponse:
       properties:
         id:
@@ -2497,6 +1682,7 @@ components:
       - HELD
       - BOOKED
       title: SeatStatus
+      description: 'Seat status as shown to clients: an expired hold reads as AVAILABLE.'
     SeatType:
       type: string
       enum:
@@ -2532,54 +1718,6 @@ components:
       - startsAt
       - basePrice
       title: ShowtimeCreateRequest
-    ShowtimeDetailResponse:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        movieId:
-          type: string
-          format: uuid
-          title: Movieid
-        auditoriumId:
-          type: string
-          format: uuid
-          title: Auditoriumid
-        startsAt:
-          type: string
-          format: date-time
-          title: Startsat
-        endsAt:
-          type: string
-          format: date-time
-          title: Endsat
-        basePrice:
-          type: integer
-          title: Baseprice
-        currency:
-          type: string
-          title: Currency
-          default: VND
-        isOpenForBooking:
-          type: boolean
-          title: Isopenforbooking
-        movie:
-          $ref: '#/components/schemas/MovieRef'
-        auditorium:
-          $ref: '#/components/schemas/AuditoriumRef'
-      type: object
-      required:
-      - id
-      - movieId
-      - auditoriumId
-      - startsAt
-      - endsAt
-      - basePrice
-      - isOpenForBooking
-      - movie
-      - auditorium
-      title: ShowtimeDetailResponse
     ShowtimeRef:
       properties:
         id:
@@ -2737,23 +1875,6 @@ components:
       - role
       - createdAt
       title: UserResponse
-    UserUpdateRequest:
-      properties:
-        fullName:
-          type: string
-          maxLength: 100
-          minLength: 1
-          title: Fullname
-        role:
-          $ref: '#/components/schemas/Role'
-      additionalProperties: false
-      type: object
-      required:
-      - fullName
-      - role
-      title: UserUpdateRequest
-      description: Email and password stay with the account owner; admins change only
-        these.
   securitySchemes:
     HTTPBearer:
       type: http

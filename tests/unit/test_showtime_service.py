@@ -5,7 +5,8 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.domain.auth.model import Actor, Role
-from app.domain.booking.model import Booking, BookingStatus
+from app.domain.booking.model import Booking, BookingStatus, SeatStatus
+from app.domain.booking.service import BookingService
 from app.domain.catalog.model import Movie
 from app.domain.cinema.model import Room, SeatType, generate_seats
 from app.domain.errors import (
@@ -14,7 +15,7 @@ from app.domain.errors import (
     NotFoundError,
     ShowtimeOverlapError,
 )
-from app.domain.scheduling.model import SeatStatus, Showtime, overlaps, seat_price
+from app.domain.scheduling.model import Showtime, overlaps, seat_price
 from app.domain.scheduling.service import ShowtimeService
 from tests.unit.fakes import FakeUnitOfWork
 
@@ -137,9 +138,13 @@ def test_seat_map_prices_vip_rows_and_keeps_seat_order(
 ) -> None:
     showtime = _create(service, uow, at(0))
 
-    _, room, entries = service.seat_map(showtime.id)
+    # The seat map belongs to booking, which owns the inventory scheduling created.
+    seat_map = BookingService(uow, 300, 2, 5).seat_map(showtime.id)
 
-    assert room.name == "Phòng 1"
+    assert seat_map.showtime == showtime
+    assert seat_map.movie.id == showtime.movie_id
+    assert seat_map.room.name == "Phòng 1"
+    entries = seat_map.seats
     assert [f"{e.seat.row_label}{e.seat.number}" for e in entries] == ["A1", "A2", "B1", "B2"]
     assert [e.price for e in entries] == [90_000, 90_000, 117_000, 117_000]
     assert {e.status for e in entries} == {SeatStatus.AVAILABLE}
@@ -152,22 +157,9 @@ def test_delete_showtime(service: ShowtimeService, uow: FakeUnitOfWork) -> None:
         service.delete_showtime(CUSTOMER, showtime.id)
     service.delete_showtime(ADMIN, showtime.id)
 
-    with pytest.raises(NotFoundError):
-        service.seat_map(showtime.id)
+    assert uow.showtimes.get(showtime.id) is None
     with pytest.raises(NotFoundError):
         service.delete_showtime(ADMIN, showtime.id)
-
-
-def test_get_showtime_returns_movie_and_room(service: ShowtimeService, uow: FakeUnitOfWork) -> None:
-    created = _create(service, uow, at(0))
-
-    showtime, movie, room = service.get_showtime(created.id)
-
-    assert showtime == created
-    assert movie.id == created.movie_id
-    assert room.name == "Phòng 1"
-    with pytest.raises(NotFoundError):
-        service.get_showtime(uuid4())
 
 
 def _update(

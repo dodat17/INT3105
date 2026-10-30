@@ -2,16 +2,20 @@ from datetime import timedelta
 from secrets import token_hex
 from uuid import UUID, uuid4
 
-from app.domain.auth.model import Actor, Role, require_admin
+from app.domain.auth.model import Actor, Role
 from app.domain.booking.model import (
     Booking,
     BookingDetails,
     BookingItem,
     BookingStatus,
     InventoryState,
+    SeatMap,
+    SeatMapEntry,
+    SeatStatus,
     effective_status,
     validate_seat_ids,
 )
+from app.domain.booking.ports import BookingUnitOfWorkFactory
 from app.domain.errors import (
     BookingExpiredError,
     BookingValidationError,
@@ -22,14 +26,14 @@ from app.domain.errors import (
     SeatUnavailableError,
     ShowtimeNotBookableError,
 )
-from app.domain.ports import Page, UnitOfWorkFactory
+from app.domain.ports import Page
 from app.domain.scheduling.model import seat_price
 
 
 class BookingService:
     def __init__(
         self,
-        uow_factory: UnitOfWorkFactory,
+        uow_factory: BookingUnitOfWorkFactory,
         hold_ttl_seconds: int,
         max_holds_per_showtime: int,
         max_active_holds: int,
@@ -138,30 +142,26 @@ class BookingService:
     def details(self, actor: Actor, booking_id: UUID) -> BookingDetails:
         return self._details(self.get(actor, booking_id))
 
-    def admin_details(self, actor: Actor, booking_id: UUID) -> BookingDetails:
-        require_admin(actor)
+    def seat_map(self, showtime_id: UUID) -> SeatMap:
         with self._uow_factory() as uow:
-            booking = uow.bookings.get(booking_id)
-            if booking is None:
+            showtime = uow.showtimes.get(showtime_id)
+            if showtime is None:
                 raise NotFoundError
-            now = uow.clock.now()
-        status = effective_status(booking.status, booking.expires_at, now)
-        return self._details(booking if status is booking.status else booking.with_status(status))
-
-    def admin_list(
-        self,
-        actor: Actor,
-        *,
-        user_id: UUID | None,
-        showtime_id: UUID | None,
-        status: BookingStatus | None,
-        page: int,
-        page_size: int,
-    ) -> Page[Booking]:
-        require_admin(actor)
-        with self._uow_factory() as uow:
-            now = uow.clock.now()
-            return uow.bookings.search(user_id, showtime_id, status, now, page, page_size)
+            movie = uow.movies.get(showtime.movie_id)
+            room = uow.rooms.get(showtime.room_id)
+            if movie is None or room is None:
+                raise NotFoundError
+            seats = uow.rooms.seats(room.id)
+            statuses = uow.inventory.statuses(showtime.id, uow.clock.now())
+        entries = [
+            SeatMapEntry(
+                seat,
+                seat_price(showtime.base_price, seat.seat_type),
+                SeatStatus(statuses.get(seat.id, SeatStatus.AVAILABLE)),
+            )
+            for seat in seats
+        ]
+        return SeatMap(showtime, movie, room, entries)
 
     def _details(self, booking: Booking) -> BookingDetails:
         with self._uow_factory() as uow:

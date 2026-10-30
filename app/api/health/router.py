@@ -22,7 +22,6 @@ class ReadinessResponse(BaseModel):
     checks: dict[str, CheckStatus]
 
 
-@router.get("/health", response_model=HealthResponse)
 @router.get("/health/live", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(status="ok")

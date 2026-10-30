@@ -8,8 +8,7 @@ from pydantic import AwareDatetime, Field
 from app.api.common.auth import ActorDep
 from app.api.common.schemas import CONFLICT, CamelModel, PageResponse, RequestModel
 from app.api.dependencies import ShowtimeServiceDep
-from app.domain.cinema.model import SeatType
-from app.domain.scheduling.model import SeatMapEntry, SeatStatus, Showtime
+from app.domain.scheduling.model import Showtime
 
 router = APIRouter(prefix="/showtimes", tags=["scheduling"])
 admin_router = APIRouter(prefix="/admin/showtimes", tags=["admin"])
@@ -59,40 +58,6 @@ class AuditoriumRef(CamelModel):
     name: str
 
 
-class ShowtimeDetailResponse(ShowtimeResponse):
-    movie: MovieRef
-    auditorium: AuditoriumRef
-
-
-class SeatResponse(CamelModel):
-    id: UUID
-    row_label: str
-    number: int
-    label: str
-    seat_type: SeatType
-    price: int
-    status: SeatStatus
-
-    @classmethod
-    def from_domain(cls, entry: SeatMapEntry) -> "SeatResponse":
-        seat = entry.seat
-        return cls(
-            id=seat.id,
-            row_label=seat.row_label,
-            number=seat.number,
-            label=f"{seat.row_label}{seat.number}",
-            seat_type=seat.seat_type,
-            price=entry.price,
-            status=entry.status,
-        )
-
-
-class SeatMapResponse(CamelModel):
-    showtime_id: UUID
-    auditorium: AuditoriumRef
-    seats: list[SeatResponse]
-
-
 @router.get("", summary="Lịch chiếu (lọc theo phim, ngày)")
 def list_showtimes(
     service: ShowtimeServiceDep,
@@ -110,26 +75,6 @@ def list_showtimes(
         page=result.page,
         page_size=result.page_size,
         total_items=result.total_items,
-    )
-
-
-@router.get("/{showtime_id}", summary="Chi tiết suất chiếu")
-def get_showtime(showtime_id: UUID, service: ShowtimeServiceDep) -> ShowtimeDetailResponse:
-    showtime, movie, room = service.get_showtime(showtime_id)
-    return ShowtimeDetailResponse(
-        **ShowtimeResponse.from_domain(showtime).model_dump(),
-        movie=MovieRef(id=movie.id, title=movie.title),
-        auditorium=AuditoriumRef(id=room.id, name=room.name),
-    )
-
-
-@router.get("/{showtime_id}/seats", summary="Sơ đồ ghế của suất chiếu")
-def seat_map(showtime_id: UUID, service: ShowtimeServiceDep) -> SeatMapResponse:
-    showtime, room, entries = service.seat_map(showtime_id)
-    return SeatMapResponse(
-        showtime_id=showtime.id,
-        auditorium=AuditoriumRef(id=room.id, name=room.name),
-        seats=[SeatResponse.from_domain(entry) for entry in entries],
     )
 
 

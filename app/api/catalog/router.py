@@ -7,7 +7,6 @@ from pydantic import Field, StringConstraints
 from app.api.common.auth import ActorDep
 from app.api.common.schemas import CamelModel, PageResponse, RequestModel
 from app.api.dependencies import MovieServiceDep
-from app.domain.auth.model import require_admin
 from app.domain.catalog.model import Movie
 from app.domain.ports import Page
 
@@ -74,18 +73,6 @@ def list_movies(
 @router.get("/{movie_id}", summary="Chi tiết phim")
 def get_movie(movie_id: UUID, service: MovieServiceDep) -> MovieResponse:
     return MovieResponse.from_domain(service.get_movie(movie_id))
-
-
-@admin_router.get("", summary="Danh sách phim cho quản trị (ADMIN)")
-def admin_list_movies(
-    actor: ActorDep,
-    service: MovieServiceDep,
-    q: QueryParam = None,
-    page: PageParam = 1,
-    page_size: PageSizeParam = 20,
-) -> PageResponse[MovieResponse]:
-    require_admin(actor)
-    return _movie_page(service.list_movies(q, page, page_size))
 
 
 @admin_router.post("", status_code=201, summary="Thêm phim (ADMIN)")

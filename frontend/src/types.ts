@@ -90,7 +90,13 @@ export type Seat = {
 
 export type SeatMap = {
   showtimeId: string;
+  movie: Pick<Movie, 'id' | 'title'>;
   auditorium: Pick<Room, 'id' | 'name'>;
+  startsAt: string;
+  endsAt: string;
+  basePrice: number;
+  currency: 'VND';
+  isOpenForBooking: boolean;
   seats: Seat[];
 };
 

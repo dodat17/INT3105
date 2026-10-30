@@ -32,26 +32,10 @@ class InMemoryUsers:
     def get_by_email(self, email: str) -> User | None:
         return next((u for u in self.rows.values() if u.email == email), None)
 
-    def search(self, query: str | None, role: Role | None, page: int, page_size: int) -> Page[User]:
-        found = [
-            u
-            for u in self.rows.values()
-            if (not query or query.lower() in f"{u.email} {u.full_name}".lower())
-            and (role is None or u.role is role)
-        ]
-        start = (page - 1) * page_size
-        return Page(found[start : start + page_size], page, page_size, len(found))
-
     def add(self, user: User) -> None:
         if self.get_by_email(user.email):
             raise EmailAlreadyUsedError
         self.rows[user.id] = user
-
-    def update(self, user: User) -> None:
-        self.rows[user.id] = user
-
-    def delete(self, user_id: UUID) -> None:
-        del self.rows[user_id]
 
 
 class InMemoryMovies:
@@ -98,9 +82,6 @@ class InMemoryRooms:
         self.rows[room.id] = room
         self.seat_rows[room.id] = seats
 
-    def update(self, room: Room, seats: list[Seat]) -> None:
-        self.add(room, seats)
-
     def seats(self, room_id: UUID) -> list[Seat]:
         return sorted(self.seat_rows.get(room_id, []), key=lambda s: (s.row_label, s.number))
 
@@ -146,9 +127,6 @@ class InMemoryShowtimes:
     def exists_for_movie(self, movie_id: UUID) -> bool:
         return any(s.movie_id == movie_id for s in self.rows.values())
 
-    def exists_for_room(self, room_id: UUID) -> bool:
-        return any(s.room_id == room_id for s in self.rows.values())
-
     def add(self, showtime: Showtime) -> None:
         self.rows[showtime.id] = showtime
 
@@ -169,24 +147,12 @@ class InMemoryBookings:
     def list_for_user(
         self, user_id: UUID, status: BookingStatus | None, now: datetime, page: int, page_size: int
     ) -> Page[Booking]:
-        return self.search(user_id, None, status, now, page, page_size)
-
-    def search(
-        self,
-        user_id: UUID | None,
-        showtime_id: UUID | None,
-        status: BookingStatus | None,
-        now: datetime,
-        page: int,
-        page_size: int,
-    ) -> Page[Booking]:
         found = [
             b
             if effective_status(b.status, b.expires_at, now) is b.status
             else b.with_status(BookingStatus.EXPIRED)
             for b in self.rows.values()
-            if (user_id is None or b.user_id == user_id)
-            and (showtime_id is None or b.showtime_id == showtime_id)
+            if b.user_id == user_id
         ]
         if status is not None:
             found = [b for b in found if b.status is status]
@@ -207,9 +173,6 @@ class InMemoryBookings:
 
     def exists_for_showtime(self, showtime_id: UUID) -> bool:
         return any(b.showtime_id == showtime_id for b in self.rows.values())
-
-    def exists_for_user(self, user_id: UUID) -> bool:
-        return any(b.user_id == user_id for b in self.rows.values())
 
     def add(self, booking: Booking) -> None:
         self.rows[booking.id] = booking

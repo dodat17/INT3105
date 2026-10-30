@@ -15,11 +15,53 @@ from app.api.common.schemas import (
 )
 from app.api.dependencies import BookingServiceDep
 from app.api.scheduling.router import AuditoriumRef, MovieRef
-from app.domain.booking.model import Booking, BookingDetails, BookingStatus
+from app.domain.booking.model import (
+    Booking,
+    BookingDetails,
+    BookingStatus,
+    SeatMapEntry,
+    SeatStatus,
+)
 from app.domain.cinema.model import SeatType
 
 router = APIRouter(tags=["booking"])
-admin_router = APIRouter(prefix="/admin/bookings", tags=["admin"])
+
+
+class SeatResponse(CamelModel):
+    id: UUID
+    row_label: str
+    number: int
+    label: str
+    seat_type: SeatType
+    price: int
+    status: SeatStatus
+
+    @classmethod
+    def from_domain(cls, entry: SeatMapEntry) -> "SeatResponse":
+        seat = entry.seat
+        return cls(
+            id=seat.id,
+            row_label=seat.row_label,
+            number=seat.number,
+            label=f"{seat.row_label}{seat.number}",
+            seat_type=seat.seat_type,
+            price=entry.price,
+            status=entry.status,
+        )
+
+
+class SeatMapResponse(CamelModel):
+    """Also carries the showtime itself, so the seat page needs a single request."""
+
+    showtime_id: UUID
+    movie: MovieRef
+    auditorium: AuditoriumRef
+    starts_at: datetime
+    ends_at: datetime
+    base_price: int
+    currency: str = "VND"
+    is_open_for_booking: bool
+    seats: list[SeatResponse]
 
 
 class CreateBookingRequest(RequestModel):
@@ -96,18 +138,6 @@ class BookingDetailResponse(BookingResponse):
     seats: list[BookingSeatResponse]
 
 
-class AdminBookingResponse(BookingResponse):
-    user_id: UUID
-
-    @classmethod
-    def from_booking(cls, booking: Booking) -> "AdminBookingResponse":
-        return cls(**BookingResponse.from_domain(booking).model_dump(), user_id=booking.user_id)
-
-
-class AdminBookingDetailResponse(BookingDetailResponse):
-    user_id: UUID
-
-
 def _detail_response(details: BookingDetails) -> BookingDetailResponse:
     booking = BookingResponse.from_domain(details.booking)
     movie = MovieRef(id=details.movie.id, title=details.movie.title)
@@ -134,6 +164,22 @@ def _detail_response(details: BookingDetails) -> BookingDetailResponse:
             )
             for item in details.booking.items
         ],
+    )
+
+
+@router.get("/showtimes/{showtime_id}/seats", summary="Thông tin suất chiếu và sơ đồ ghế")
+def seat_map(showtime_id: UUID, service: BookingServiceDep) -> SeatMapResponse:
+    seat_map = service.seat_map(showtime_id)
+    showtime, movie, room = seat_map.showtime, seat_map.movie, seat_map.room
+    return SeatMapResponse(
+        showtime_id=showtime.id,
+        movie=MovieRef(id=movie.id, title=movie.title),
+        auditorium=AuditoriumRef(id=room.id, name=room.name),
+        starts_at=showtime.starts_at,
+        ends_at=showtime.ends_at,
+        base_price=showtime.base_price,
+        is_open_for_booking=showtime.is_open_for_booking,
+        seats=[SeatResponse.from_domain(entry) for entry in seat_map.seats],
     )
 
 
@@ -191,39 +237,3 @@ def confirm_booking(
 def cancel_booking(booking_id: UUID, actor: ActorDep, service: BookingServiceDep) -> Response:
     service.cancel(actor, booking_id)
     return Response(status_code=204)
-
-
-@admin_router.get("", summary="Tra cứu booking (ADMIN)")
-def admin_list_bookings(
-    actor: ActorDep,
-    service: BookingServiceDep,
-    status: Annotated[BookingStatus | None, Query()] = None,
-    user_id: Annotated[UUID | None, Query(alias="userId")] = None,
-    showtime_id: Annotated[UUID | None, Query(alias="showtimeId")] = None,
-    page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
-) -> PageResponse[AdminBookingResponse]:
-    result = service.admin_list(
-        actor,
-        user_id=user_id,
-        showtime_id=showtime_id,
-        status=status,
-        page=page,
-        page_size=page_size,
-    )
-    return PageResponse[AdminBookingResponse](
-        items=[AdminBookingResponse.from_booking(item) for item in result.items],
-        page=result.page,
-        page_size=result.page_size,
-        total_items=result.total_items,
-    )
-
-
-@admin_router.get("/{booking_id}", summary="Chi tiết booking bất kỳ (ADMIN)")
-def admin_get_booking(
-    booking_id: UUID, actor: ActorDep, service: BookingServiceDep
-) -> AdminBookingDetailResponse:
-    details = service.admin_details(actor, booking_id)
-    return AdminBookingDetailResponse(
-        **_detail_response(details).model_dump(), user_id=details.booking.user_id
-    )

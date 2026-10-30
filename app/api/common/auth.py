@@ -7,15 +7,15 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.api.common.errors import UNAUTHENTICATED, error_response
 from app.domain.auth.model import Actor
+from app.domain.auth.ports import TokenService
 from app.domain.errors import InvalidTokenError
-from app.domain.ports import TokenService
 
 # Everything under /api/ needs a token unless listed here, so a new route is protected
 # by default. Paths outside /api/ (health, docs, the SPA) are public.
 _PUBLIC_API_ROUTES: list[tuple[frozenset[str], re.Pattern[str]]] = [
     (frozenset({"POST"}), re.compile(r"/api/v1/auth/(register|login)")),
     (frozenset({"GET", "HEAD"}), re.compile(r"/api/v1/movies(/[^/]+)?")),
-    (frozenset({"GET", "HEAD"}), re.compile(r"/api/v1/showtimes(/[^/]+(/seats)?)?")),
+    (frozenset({"GET", "HEAD"}), re.compile(r"/api/v1/showtimes(/[^/]+/seats)?")),
 ]
 
 

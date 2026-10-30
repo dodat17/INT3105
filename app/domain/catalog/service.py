@@ -2,12 +2,13 @@ from uuid import UUID, uuid4
 
 from app.domain.auth.model import Actor, require_admin
 from app.domain.catalog.model import Movie
+from app.domain.catalog.ports import CatalogUnitOfWorkFactory
 from app.domain.errors import BusinessRuleViolation, NotFoundError
-from app.domain.ports import Page, UnitOfWorkFactory
+from app.domain.ports import Page
 
 
 class MovieService:
-    def __init__(self, uow_factory: UnitOfWorkFactory) -> None:
+    def __init__(self, uow_factory: CatalogUnitOfWorkFactory) -> None:
         self._uow_factory = uow_factory
 
     def list_movies(self, query: str | None, page: int, page_size: int) -> Page[Movie]:

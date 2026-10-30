@@ -18,6 +18,14 @@ class InventoryState(StrEnum):
     BOOKED = "BOOKED"
 
 
+class SeatStatus(StrEnum):
+    """Seat status as shown to clients: an expired hold reads as AVAILABLE."""
+
+    AVAILABLE = "AVAILABLE"
+    HELD = "HELD"
+    BOOKED = "BOOKED"
+
+
 @dataclass(frozen=True)
 class InventorySeat:
     seat: "Seat"
@@ -86,3 +94,18 @@ class BookingDetails:
     movie: Movie
     room: Room
     showtime: Showtime
+
+
+@dataclass(frozen=True)
+class SeatMapEntry:
+    seat: Seat
+    price: int
+    status: SeatStatus
+
+
+@dataclass(frozen=True)
+class SeatMap:
+    showtime: Showtime
+    movie: Movie
+    room: Room
+    seats: list[SeatMapEntry]
